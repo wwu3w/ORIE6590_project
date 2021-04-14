@@ -52,11 +52,14 @@ class CityReal(gym.Env):
         self.time_horizon = time_horizon
 
 
+
         # States
         self.city_time = 0
         self.starting_c_state = np.asarray(c_state)
         self.c_state = self.starting_c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
+        self.It = sum(self.c_state[:][:self.L + 1])
+        self. i =0
 
 
         # Action
@@ -84,6 +87,8 @@ class CityReal(gym.Env):
         self.city_time
         self.c_state = self.starting_c_state
         self.p_state = np.zeros([self.R, self.R])
+        self.It = sum(self.c_state[:][:self.L+1])
+        self.i = 0
         return self.generate_state()
 
 
@@ -113,14 +118,17 @@ class CityReal(gym.Env):
         self.c_state[dest1][tt1] -= 1
         self.c_state[dest2][tt1 + tt2] += 1
 
-    def step(self, policy, i, It):
-        if i == 0:
+    def step(self, action):
+        if self.i == 0:
             self.total_reward += self.curr_reward
             self.curr_reward = 0
 
 
-        action = np.random.choice(range(self.R * self.R), 1, policy)[0]
-        o, d = np.divmod(action, self.R)
+        #action = np.random.choice(range(self.R * self.R), 1, policy)[0]
+        o, d = np.divmod(int(action), int(self.R))
+
+        #ensure there exists available cars
+        assert sum(self.c_state[o][: L + 1]) > 0
 
         for tt1 in range(self.L + 1):
             if self.c_state[o][tt1] > 0:
@@ -134,10 +142,13 @@ class CityReal(gym.Env):
             self.p_state[o][d] -= 1
         self.curr_reward += reward
 
-        if i == It:
+        self.i += 1
+
+        if self.It <= self.i:
             self.city_time += 1
             self.step_car_state_update()
             self.step_passenger_state_update()
+            self.It = sum(self.c_state[:][:self.L+1])
 
 
 

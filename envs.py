@@ -11,7 +11,7 @@ class CityReal(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, R, tau_d, L, arrival_rate, trip_dest_prob, travel_time, c_state):
+    def __init__(self, R, tau_d, L, time_horizon, arrival_rate, trip_dest_prob, travel_time, c_state, capacity = 1000):
         """
         :param mapped_matrix_int: 2D matrix: each position is either -100 or grid id from order in real data.
         :param order_num_dist: 144 [{node_id1: [mu, std]}, {node_id2: [mu, std]}, ..., {node_idn: [mu, std]}]
@@ -49,22 +49,43 @@ class CityReal(gym.Env):
         self.arrival_rate = arrival_rate
         self.trip_dest_prob = trip_dest_prob
         self.travel_time = travel_time
+        self.time_horizon = time_horizon
 
 
         # States
         self.city_time = 0
-        self.starting_c_state = c_state
-        self.c_state = c_state  # car state R * tau_d
+        self.starting_c_state = np.asarray(c_state)
+        self.c_state = self.starting_c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
 
 
         # Action
         self.action_space = gym.spaces.Discrete(self.R ** 2)
+        space_dim = []
+        space_dim.append(int(self.time_horizon))
+        for _ in range(self.R * self.tau_d): #car_state
+            space_dim.append(int(capacity))
+        for _ in range(self.R * self.R): #passenger_state
+            space_dim.append(int(capacity))
+        self.observation_space = gym.spaces.MultiDiscrete(space_dim)
+
+
+
+    def generate_state(self):
+        state1 = np.reshape(np.array(self.c_state), self.R * self.tau_d)
+        state2 = np.reshape(np.array(self.p_state), self.R ** 2)
+        state = np.concatenate((state1, state2), axis = None)
+        state = np.concatenate((np.array(self.city_time),state), axis = None)
+        return state
+
+
 
     def reset(self):
-        self.city_time = 0
+        self.city_time
         self.c_state = self.starting_c_state
         self.p_state = np.zeros([self.R, self.R])
+        return self.generate_state()
+
 
     def step_passenger_state_update(self):
         self.p_state = np.zeros([self.R, self.R])
@@ -121,7 +142,7 @@ class CityReal(gym.Env):
 
 
 
-        return self.city_time, self.c_state, self.p_state, \
+        return self.generate_state(), \
                action, reward, self.curr_reward
 
 

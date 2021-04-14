@@ -1,14 +1,17 @@
-
-
+import gym
+from gym import error, spaces, utils
+from gym.utils import seeding
 import numpy as np
 
 RANDOM_SEED = 0  # unit test use this random seed.
 
 
-class CityReal:
-    '''A real city is consists of M*N grids '''
+class CityReal(gym.Env):
+    '''A real city is consists of R grids '''
 
-    def __init__(self, R, tau_d, arrival_rate, trip_dest_prob, travel_time, c_state):
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self, R, tau_d, L, arrival_rate, trip_dest_prob, travel_time, c_state):
         """
         :param mapped_matrix_int: 2D matrix: each position is either -100 or grid id from order in real data.
         :param order_num_dist: 144 [{node_id1: [mu, std]}, {node_id2: [mu, std]}, ..., {node_idn: [mu, std]}]
@@ -53,22 +56,25 @@ class CityReal:
         self.c_state = c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
 
+        # Action
+        self.action_space = gym.spaces.Discrete(self.R ** 2)
+
     def step_passenger_state_update(self):
         self.p_state = np.zeros([self.R, self.R])
         self.generate_trip_request()
 
     def generate_trip_request(self):
-        for idx in range(R):
+        for idx in range(self.R):
             lam = self.arrival_rate[self.city_time][idx]
             n_trip = np.random.poisson(lam, 1)[0]
             dest_prob = self.trip_dest_prob[self.city_time][idx]
-            trip_dest = np.random.choice(range(R), n_trip, dest_prob)
+            trip_dest = np.random.choice(range(self.R), n_trip, dest_prob)
             for dest_idx in trip_dest:
                 self.p_state[idx][dest_idx] += 1
 
     def step_car_state_update(self):
-        for idx in range(R):
-            for t in range(1, tau_d):
+        for idx in range(self.R):
+            for t in range(1, self.tau_d):
                 n_car = self.c_state[idx][t]
                 if n_car == 0:
                     continue

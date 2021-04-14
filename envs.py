@@ -49,15 +49,22 @@ class CityReal(gym.Env):
         self.arrival_rate = arrival_rate
         self.trip_dest_prob = trip_dest_prob
         self.travel_time = travel_time
-        self.city_time = 0
+
 
         # States
-
+        self.city_time = 0
+        self.starting_c_state = c_state
         self.c_state = c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
 
+
         # Action
         self.action_space = gym.spaces.Discrete(self.R ** 2)
+
+    def reset(self):
+        self.city_time = 0
+        self.c_state = self.starting_c_state
+        self.p_state = np.zeros([self.R, self.R])
 
     def step_passenger_state_update(self):
         self.p_state = np.zeros([self.R, self.R])

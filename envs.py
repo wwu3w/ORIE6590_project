@@ -128,16 +128,19 @@ class CityReal(gym.Env):
         if self.i == 0:
             self.total_reward += self.curr_reward
             self.curr_reward = 0
+        reward = 0
 
         if self.It <= self.i:
             self.i = 0
             self.step_car_state_update()
+            if self.city_time == self.time_horizon:
+                return
             self.step_passenger_state_update()
             self.city_time += 1
             self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
             self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
 
-        reward = 0
+
 
         #action = np.random.choice(range(self.R * self.R), 1, policy)[0]
         o, d = np.divmod(int(action), int(self.R))

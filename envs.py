@@ -160,7 +160,7 @@ class CityReal(gym.Env):
         self.i += 1
 
         if self.It <= self.i:
-
+            self.i = 0
             self.step_car_state_update()
             self.step_passenger_state_update()
             self.city_time += 1

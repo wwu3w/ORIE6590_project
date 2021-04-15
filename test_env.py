@@ -61,3 +61,4 @@ env = CityReal(R, tau_d, L, H, lambda1, P1, travel_time, c_state)
 for i in range(H):
 	action = env.action_space.sample()
 	state, action, reward, cum_reward = env.step(action)
+	print(i)

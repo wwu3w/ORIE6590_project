@@ -118,7 +118,7 @@ class CityReal(gym.Env):
 
     def step_change_dest(self, dest1, dest2, tt1, tt2):
         self.c_state[dest1][tt1] -= 1
-        self.c_state[dest2][tt1 + tt2] += 1
+        self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d-1)] += 1
 
     def step(self, action):
         if self.i == 0:

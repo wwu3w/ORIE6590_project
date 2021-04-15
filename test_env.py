@@ -65,8 +65,17 @@ for i in range(H):
 		trip_dest_prob[i,:,:] = P3
 		arrival_rate[i,:] = lambda3
 env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
+state = env.reset()
 
-for i in range(H):
-	action = env.action_space.sample()
-	state, action, reward, cum_reward = env.step(action)
-	print(i)
+while env.city_time <= H:
+	feasible_act = False
+	j = 0
+	while not feasible_act:
+		action = env.action_space.sample()
+		state, action, reward, cum_reward, feasible_act = env.step(action)
+		j += 1
+		if j == 100:
+			print(action, feasible_act)
+	print(env.i, env.It, env.city_time)
+
+

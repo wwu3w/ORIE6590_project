@@ -58,7 +58,7 @@ class CityReal(gym.Env):
         self.starting_c_state = np.asarray(c_state)
         self.c_state = self.starting_c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
-        self.It = np.sum(self.c_state[:][:self.L+1])
+        self.It = 0
         self.i = 0
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
 
@@ -85,12 +85,13 @@ class CityReal(gym.Env):
 
 
     def reset(self):
-        self.city_time
+        self.city_time = 0
         self.c_state = self.starting_c_state
-        self.p_state = np.zeros([self.R, self.R])
-        self.It = np.sum(self.c_state[:][:self.L+1])
-        self.i = 0
+        self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
+        self.It = np.sum(self.c_state[:][:self.patience_time])
+        self.i = 0
+
         return self.generate_state()
 
 
@@ -103,9 +104,12 @@ class CityReal(gym.Env):
             lam = self.arrival_rate[self.city_time][idx]
             n_trip = np.random.poisson(lam, 1)[0]
             dest_prob = self.trip_dest_prob[self.city_time][idx]
-            trip_dest = np.random.choice(range(self.R), n_trip, dest_prob)
-            for dest_idx in trip_dest:
-                self.p_state[idx][dest_idx] += 1
+            #print(self.R,n_trip, dest_prob)
+            if n_trip > 0:
+                #print(self.R, n_trip, dest_prob)
+                trip_dest = np.random.choice(self.R, n_trip, dest_prob)
+                for dest_idx in trip_dest:
+                    self.p_state[idx][dest_idx] += 1
 
     def step_car_state_update(self):
         for idx in range(self.R):
@@ -125,12 +129,15 @@ class CityReal(gym.Env):
             self.total_reward += self.curr_reward
             self.curr_reward = 0
 
+        reward = 0
 
         #action = np.random.choice(range(self.R * self.R), 1, policy)[0]
         o, d = np.divmod(int(action), int(self.R))
 
         #ensure there exists available cars
-        assert np.sum(self.c_state[o][: self.patience_time]) > 0
+
+        if np.sum(self.c_state[o][: self.patience_time]) <= 0:
+            return self.generate_state(), action, reward, self.curr_reward, False
 
         for tt1 in range(self.L + 1):
             if self.c_state[o][tt1] > 0:
@@ -153,15 +160,17 @@ class CityReal(gym.Env):
         self.i += 1
 
         if self.It <= self.i:
-            self.city_time += 1
+
             self.step_car_state_update()
             self.step_passenger_state_update()
-            self.It = np.sum(self.c_state[:][:self.patience_time])
+            self.city_time += 1
             self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
+            self.It = np.sum(self.c_state[:][:self.patience_time])
 
 
 
 
-        return self.generate_state(), action, reward, self.curr_reward
+
+        return self.generate_state(), action, reward, self.curr_reward, True
 
 

@@ -58,8 +58,9 @@ class CityReal(gym.Env):
         self.starting_c_state = np.asarray(c_state)
         self.c_state = self.starting_c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
-        self.It = sum(self.c_state[:][:self.L + 1])
-        self. i =0
+        self.It = np.sum(self.c_state[:][:self.L+1])
+        self.i = 0
+        self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
 
 
         # Action
@@ -87,8 +88,9 @@ class CityReal(gym.Env):
         self.city_time
         self.c_state = self.starting_c_state
         self.p_state = np.zeros([self.R, self.R])
-        self.It = sum(self.c_state[:][:self.L+1])
+        self.It = np.sum(self.c_state[:][:self.L+1])
         self.i = 0
+        self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         return self.generate_state()
 
 
@@ -128,18 +130,24 @@ class CityReal(gym.Env):
         o, d = np.divmod(int(action), int(self.R))
 
         #ensure there exists available cars
-        assert sum(self.c_state[o][: L + 1]) > 0
+        assert np.sum(self.c_state[o][: self.patience_time]) > 0
 
         for tt1 in range(self.L + 1):
             if self.c_state[o][tt1] > 0:
                 break
 
         tt2 = self.travel_time[self.city_time + tt1][o][d]
-        self.step_change_dest(o, d, tt1, tt2)
-        reward = 0
+
+
         if self.p_state[o][d] > 0:
             reward = 1
             self.p_state[o][d] -= 1
+        else:
+            reward = 0
+            if o == d:
+                tt2 = 0
+
+        self.step_change_dest(o, d, tt1, tt2)
         self.curr_reward += reward
 
         self.i += 1
@@ -148,12 +156,12 @@ class CityReal(gym.Env):
             self.city_time += 1
             self.step_car_state_update()
             self.step_passenger_state_update()
-            self.It = sum(self.c_state[:][:self.L+1])
+            self.It = np.sum(self.c_state[:][:self.patience_time])
+            self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
 
 
 
 
-        return self.generate_state(), \
-               action, reward, self.curr_reward
+        return self.generate_state(), action, reward, self.curr_reward
 
 

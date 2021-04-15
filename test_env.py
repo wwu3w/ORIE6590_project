@@ -40,7 +40,7 @@ tau3 = np.array([[9, 15, 75, 12, 24],
 	          	[12, 6, 60, 9, 15],
 	          	[24, 18, 39, 15, 12]])
 tau_d = np.max(tau1)
-c_state = np.zeros((R, tau_d))
+c_state = np.zeros((R, tau_d + L))
 tot_unassigned = N
 num_empty_cell = R*tau_d
 for i in range(R):
@@ -66,16 +66,24 @@ for i in range(H):
 		arrival_rate[i,:] = lambda3
 env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
 state = env.reset()
+#print(env.c_state)
+#print(env.patience_time)
+#print(np.sum([env.c_state[_][0:env.patience_time] for _ in range(env.R)]))
 
-while env.city_time <= H:
+
+while env.city_time < H:
 	feasible_act = False
-	j = 0
+	#j = 0
 	while not feasible_act:
 		action = env.action_space.sample()
 		state, action, reward, cum_reward, feasible_act = env.step(action)
-		j += 1
-		if j == 100:
-			print(action, feasible_act)
+		#j += 1
+		#if j >= 10 and j <=50:
+			#print(action, feasible_act)
 	print(env.i, env.It, env.city_time)
+
+print(env.c_state)
+print(env.p_state)
+	#print(env)
 
 

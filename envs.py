@@ -76,7 +76,7 @@ class CityReal(gym.Env):
 
 
     def generate_state(self):
-        state1 = np.reshape(np.array(self.c_state), self.R * self.tau_d)
+        state1 = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
         state2 = np.reshape(np.array(self.p_state), self.R ** 2)
         state = np.concatenate((state1, state2), axis = None)
         state = np.concatenate((np.array(self.city_time),state), axis = None)
@@ -89,7 +89,7 @@ class CityReal(gym.Env):
         self.c_state = self.starting_c_state
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum(self.c_state[:][:self.patience_time])
+        self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
         self.i = 0
 
         return self.generate_state()
@@ -106,8 +106,8 @@ class CityReal(gym.Env):
             dest_prob = self.trip_dest_prob[self.city_time][idx]
             #print(self.R,n_trip, dest_prob)
             if n_trip > 0:
-                #print(self.R, n_trip, dest_prob)
-                trip_dest = np.random.choice(self.R, n_trip, dest_prob)
+                #print(dest_prob.shape())
+                trip_dest = np.random.choice(self.R, n_trip, p = dest_prob)
                 for dest_idx in trip_dest:
                     self.p_state[idx][dest_idx] += 1
 
@@ -165,7 +165,7 @@ class CityReal(gym.Env):
             self.step_passenger_state_update()
             self.city_time += 1
             self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-            self.It = np.sum(self.c_state[:][:self.patience_time])
+            self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
 
 
 

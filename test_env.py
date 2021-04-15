@@ -49,14 +49,22 @@ for i in range(R):
 		tot_unassigned -= c_state[i,j]
 		num_empty_cell -= 1
 travel_time = np.zeros((H,R,R))
+trip_dest_prob = np.zeros((H,R,R))
+arrival_rate = np.zeros((H,R))
 for i in range(H):
 	if i >= 0 and i <= 120:
 		travel_time[i,:,:] = tau1
+		trip_dest_prob[i,:,:] = P1
+		arrival_rate[i,:] = lambda1
 	elif i >= 121 and i <= 240:
 		travel_time[i,:,:] = tau2
+		trip_dest_prob[i,:,:] = P2
+		arrival_rate[i,:] = lambda2
 	else:
 		travel_time[i,:,:] = tau3
-env = CityReal(R, tau_d, L, H, lambda1, P1, travel_time, c_state)
+		trip_dest_prob[i,:,:] = P3
+		arrival_rate[i,:] = lambda3
+env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
 
 for i in range(H):
 	action = env.action_space.sample()

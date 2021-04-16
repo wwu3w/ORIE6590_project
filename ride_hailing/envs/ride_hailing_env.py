@@ -131,7 +131,7 @@ class CityReal(gym.Env):
         #ensure there exists available cars
 
         if np.sum(self.c_state[o][: self.patience_time]) <= 0:
-            return self.generate_state(), action, reward, self.curr_reward, False
+            return self.generate_state(), action, reward, False
 
         for tt1 in range(self.L + 1):
             if self.c_state[o][tt1] > 0:
@@ -165,6 +165,6 @@ class CityReal(gym.Env):
 
 
 
-        return output_state, action, reward, self.curr_reward, True
+        return output_state, action, reward, True
 
 

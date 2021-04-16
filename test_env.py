@@ -1,6 +1,4 @@
-import numpy as np
-import gym
-from envs import *
+from ride_hailing.envs.ride_hailing_env import *
 
 
 # Parameters for initialization

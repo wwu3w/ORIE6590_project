@@ -124,22 +124,20 @@ class CityReal(gym.Env):
         self.c_state[dest1][tt1] -= 1
         self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d-1)] += 1
 
+    def step_time_update(self):
+        self.i = 0
+        self.step_car_state_update()
+        self.step_passenger_state_update()
+        self.city_time += 1
+        self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
+        self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
+        print(self.i, self.It, self.city_time)
+
     def step(self, action):
         if self.i == 0:
             self.total_reward += self.curr_reward
             self.curr_reward = 0
         reward = 0
-
-        if self.It <= self.i:
-            self.i = 0
-            self.step_car_state_update()
-            if self.city_time == self.time_horizon:
-                return
-            self.step_passenger_state_update()
-            self.city_time += 1
-            self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-            self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
-
 
 
         #action = np.random.choice(range(self.R * self.R), 1, policy)[0]
@@ -170,13 +168,16 @@ class CityReal(gym.Env):
 
         self.i += 1
 
+        output_state = self.generate_state()
+        print(self.i, self.It, self.city_time)
+        while self.It <= self.i and self.city_time < self.time_horizon:
+            self.step_time_update()
 
 
 
 
 
 
-
-        return self.generate_state(), action, reward, self.curr_reward, True
+        return output_state, action, reward, self.curr_reward, True
 
 

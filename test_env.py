@@ -74,13 +74,14 @@ state = env.reset()
 while env.city_time < H:
 	feasible_act = False
 	#j = 0
-	while not feasible_act:
+	while not feasible_act and env.city_time < H:
 		action = env.action_space.sample()
 		state, action, reward, cum_reward, feasible_act = env.step(action)
 		#j += 1
 		#if j >= 10 and j <=50:
 			#print(action, feasible_act)
-	print(env.i, env.It, env.city_time)
+
+	print(np.sum([env.c_state[_][0:env.patience_time] for _ in range(env.R)]))
 
 print(env.c_state)
 print(env.p_state)

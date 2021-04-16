@@ -1,7 +1,9 @@
 import numpy as np
 import gym
 from envs import *
-#test env
+
+
+# Parameters for initialization
 R = 5
 N = 1000 #number of cars
 H = 360 #length of a working day
@@ -64,27 +66,34 @@ for i in range(H):
 		travel_time[i,:,:] = tau3
 		trip_dest_prob[i,:,:] = P3
 		arrival_rate[i,:] = lambda3
+
+
 env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
+
+
 state = env.reset()
+
+r = 0
+r_square = 0
+numiters = 10
+
+for _ in range(numiters):
+    state = env.reset()
+    while env.city_time < env.time_horizon:
+        feasible_act = False
+            # j = 0
+        while not feasible_act and env.city_time < env.time_horizon:
+            action = env.action_space.sample()
+            state, action, reward, cum_reward, feasible_act = env.step(action)
+    r += env.total_reward
+    r_square += env.total_reward ** 2
+
+mean_reward = r/numiters
+sd_reward = np.sqrt(r_square/numiters - mean_reward ** 2)
+print(mean_reward, sd_reward)
+
 #print(env.c_state)
-#print(env.patience_time)
-#print(np.sum([env.c_state[_][0:env.patience_time] for _ in range(env.R)]))
-
-
-while env.city_time < H:
-	feasible_act = False
-	#j = 0
-	while not feasible_act and env.city_time < H:
-		action = env.action_space.sample()
-		state, action, reward, cum_reward, feasible_act = env.step(action)
-		#j += 1
-		#if j >= 10 and j <=50:
-			#print(action, feasible_act)
-
-	print(np.sum([env.c_state[_][0:env.patience_time] for _ in range(env.R)]))
-
-print(env.c_state)
-print(env.p_state)
+#print(env.p_state)
 	#print(env)
 
 

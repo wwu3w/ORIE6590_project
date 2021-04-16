@@ -42,7 +42,7 @@ class CityReal(gym.Env):
         self.L = L
         self.curr_reward = 0
         self.total_reward = 0
-
+        self.terminate = False
 
 
         # parameters
@@ -91,7 +91,7 @@ class CityReal(gym.Env):
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
         self.i = 0
-
+        self.terminate = False
         return self.generate_state()
 
 
@@ -131,7 +131,7 @@ class CityReal(gym.Env):
         self.city_time += 1
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
-        print(self.i, self.It, self.city_time)
+        #print(self.i, self.It, self.city_time)
 
     def step(self, action):
         if self.i == 0:
@@ -169,9 +169,11 @@ class CityReal(gym.Env):
         self.i += 1
 
         output_state = self.generate_state()
-        print(self.i, self.It, self.city_time)
+        #print(self.i, self.It, self.city_time)
         while self.It <= self.i and self.city_time < self.time_horizon:
             self.step_time_update()
+            if self.city_time == self.time_horizon:
+                self.terminate = True
 
 
 

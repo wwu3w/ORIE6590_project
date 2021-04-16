@@ -4,12 +4,12 @@ from ride_hailing.envs.ride_hailing_env import *
 def evaluate(model, env, numiters):
     r = 0
     r_square = 0
-
+    # Start to iterate simulation loops
     for _ in range(numiters):
         state = env.reset()
+        # Loop for a whole time horizon of the ride-hailing system
         while env.city_time < env.time_horizon:
             feasible_act = False
-            # j = 0
             while not feasible_act and env.city_time < env.time_horizon:
                 action = model(state, env)
                 state, action, reward, cum_reward, feasible_act = env.step(action)

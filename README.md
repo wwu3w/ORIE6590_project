@@ -14,7 +14,6 @@ Transitions: <br />
 car state transition: <br />
 1). At each time step, each car is one time step closer to its destination. <br />
 2). If an atomic action is applied on a car, then its destination will be changed correspondingly. <br />
-
 passenger/order state transition: <br />
 1). New orders will appear at each grid according to the independent Poission distributions with pre-specified arrival rates.<br />
 2). If a car-passenger matching (o, d) is successful, then the number of the orders at (o, d) is deducted by 1. <br />

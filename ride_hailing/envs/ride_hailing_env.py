@@ -71,6 +71,7 @@ class CityReal(gym.Env):
 
 
     def reset(self):
+        self.total_reward = 0
         self.city_time = 0
         self.c_state = self.starting_c_state
         self.step_passenger_state_update()
@@ -120,9 +121,7 @@ class CityReal(gym.Env):
         #print(self.i, self.It, self.city_time)
 
     def step(self, action):
-        if self.i == 0:
-            self.total_reward += self.curr_reward
-            self.curr_reward = 0
+
         reward = 0
 
 
@@ -150,7 +149,7 @@ class CityReal(gym.Env):
                 tt2 = 0
 
         self.step_change_dest(o, d, tt1, tt2)
-        self.curr_reward += reward
+        self.total_reward_reward += reward
 
         self.i += 1
 

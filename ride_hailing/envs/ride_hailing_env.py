@@ -149,7 +149,7 @@ class CityReal(gym.Env):
                 tt2 = 0
 
         self.step_change_dest(o, d, tt1, tt2)
-        self.total_reward_reward += reward
+        self.total_reward += reward
 
         self.i += 1
 

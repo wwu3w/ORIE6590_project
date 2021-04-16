@@ -1,5 +1,5 @@
 
-import numpy as np
+from ride_hailing.envs.ride_hailing_env import *
 
 def evaluate(model, env, numiters):
     r = 0
@@ -15,4 +15,7 @@ def evaluate(model, env, numiters):
                 state, action, reward, cum_reward, feasible_act = env.step(action)
         r += env.total_reward
         r_square += env.total_reward ** 2
-    return r/numiters, (r_square - r)/numiters
+
+    mean_reward = r/numiters
+    sd_reward = np.sqrt(r_square/numiters - mean_reward ** 2)
+    return mean_reward, sd_reward

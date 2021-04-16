@@ -6,7 +6,7 @@ def evaluate(model, env, numiters):
     r_square = 0
 
     for _ in range(numiters):
-        state = env.rest()
+        state = env.reset()
         while env.city_time < env.time_horizon:
             feasible_act = False
             # j = 0

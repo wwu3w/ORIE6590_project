@@ -3,7 +3,6 @@ State space: <br />
 car state: 2D array with dimention Rx(tau_d + L). Each entry represents the number of cars that need time tau to reach the destination r. <br />
 passenger/order state: 2D array with dimention RxR. Each entry represents that number of orders that start from o to d.<br />
 city time: a integer that represents the cumulative running time of the system to up now.<br />
-
 Action space: <br />
 2D array with dimension RxR. Each action specifiying trip from o to d. Each trip can be a car-passenger matching, car empty routing or do-nothing (o=d).
 

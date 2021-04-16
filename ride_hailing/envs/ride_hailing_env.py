@@ -13,28 +13,14 @@ class CityReal(gym.Env):
 
     def __init__(self, R, tau_d, L, time_horizon, arrival_rate, trip_dest_prob, travel_time, c_state, capacity = 1000):
         """
-        :param mapped_matrix_int: 2D matrix: each position is either -100 or grid id from order in real data.
-        :param order_num_dist: 144 [{node_id1: [mu, std]}, {node_id2: [mu, std]}, ..., {node_idn: [mu, std]}]
-                            node_id1 is node the index in self.nodes
-        :param idle_driver_dist_time: [[mu1, std1], [mu2, std2], ..., [mu144, std144]] mean and variance of idle drivers in
-        the city at each time
-        :param idle_driver_location_mat: 144 x num_valid_grids matrix.
-        :param order_time_dist: [ 0.27380797,..., 0.00205766] The probs of order duration = 1 to 9
-        :param order_price_dist: [[10.17, 3.34],   # mean and std of order's price, order durations = 10 minutes.
-                                   [15.02, 6.90],  # mean and std of order's price, order durations = 20 minutes.
-                                   ...,]
-        :param onoff_driver_location_mat: 144 x 504 x 2: 144 total time steps, num_valid_grids = 504.
-        mean and std of online driver number - offline driver number
-        onoff_driver_location_mat[t] = [[-0.625       2.92350389]  <-- Corresponds to the grid in target_node_ids
-                                        [ 0.09090909  1.46398452]
-                                        [ 0.09090909  2.36596622]
-                                        [-1.2         2.05588586]...]
-        :param M:
-        :param N:
-        :param n_side:
-        :param time_interval:
-        :param l_max: The max-duration of an order
-        :return:
+        :param R: interger, number of grids.
+        :param tau_d: the longest trip travel time
+        :param L: patience time
+        :param time_horizon: time horizon of this system, number of time epochs
+        :param arrival_rate: time_horizon * R: customer arrival rates [[1.8, 1.8, ...] ...]
+        :param trip_dest_prob: time_horizon * R * R : probabilities among all destination grids [[[0.1, 0.2] ...] ...]
+        :param travel_time: time_horizon * R * R : travel time for trip at time t from grid o to grid d [[[0.1, 0.2] ...] ...]
+
         """
         # City.__init__(self, M, N, n_side, time_interval)
         self.R = R

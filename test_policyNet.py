@@ -1,6 +1,7 @@
 from ride_hailing.envs.ride_hailing_env import *
 from evaluate import *
 from policyNetCentralized import *
+from valueEstimator import *
 import torch
 # Parameters for initialization
 R = 5
@@ -71,7 +72,14 @@ for i in range(H):
 
 env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
 policyNet = PolicyNet(env)
+input = env.generate_state().astype(np.float32)
+input = torch.from_numpy(input)
+out = policyNet(input)
+sample = torch.multinomial(out,1)
+print(out)
+print(sample.item())
+valuefnc = valueEstimator(env)
 epochs = 1000
 dataset = []
-for i in range(epochs):
+#for i in range(epochs):
 

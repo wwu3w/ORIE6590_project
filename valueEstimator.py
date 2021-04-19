@@ -1,10 +1,12 @@
 import torch
 import numpy as np
 from torch import nn
+from utilities import *
 import gym
 device = "cpu"
 class valueEstimator(nn.Module):
     def __init__(self, env):
+        super(valueEstimator, self).__init__()
         self.env = env
         input_size = 1 + env.R * env.R + env.R * (env.tau_d + env.L) # time, passenger state, car state
         out_put_size = env.R * env.R
@@ -23,16 +25,22 @@ class valueEstimator(nn.Module):
 
     def forward(self, x):
         return self.linear_rellu_stack(x)
-    def generateSamples(self):
+    def generateSamples(self, policyNet):
         for i in range(self.dataset_size):
             data_single_trial = []
             state = self.env.reset()
+            state = torch.from_numpy(state.astype(np.float32))
+            init_action_distrib = policyNet(state)
+            init_action = torch.multinomial(init_action_distrib,1).item()
+            action = init_action
             while self.env.city_time < self.env.time_horizon:
                 feasible_act = False
                 data_piece = []
                 while not feasible_act and self.env.city_time < self.env.time_horizon:
-                    action = self.env.action_space.sample()
-                    state, action, reward, feasible_act = self.env.step(action)
+                    state, old_action, reward, feasible_act = self.env.step(action)
+                    state = torch.from_numpy(state.astype(np.float32))
+                    action_distrib = policyNet(state)
+                    action = torch.multinomial(action_distrib, 1).item()
                     if feasible_act == True:
                         data_piece.append(self.env.city_time)
                         data_piece.append(self.env.i)

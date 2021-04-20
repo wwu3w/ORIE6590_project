@@ -4,6 +4,7 @@ from policyNetCentralized import *
 from valueEstimator import *
 from utilities import *
 import torch
+
 # Parameters for initialization
 R = 5
 N = 1000 #number of cars
@@ -74,11 +75,11 @@ for i in range(H):
 env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
 policyNet = PolicyNet(env)
 valuefnc = valueEstimator(env)
-epochs = 10
-learning_rate = 1e-3
-batch_size = 100
+epochs = 2
+learning_rate = 1
+batch_size = 500
 loss_fn = nn.MSELoss()#for value network training
-optimizer = torch.optim.SGD(valuefnc.parameters(), lr = learning_rate)
+optimizer = torch.optim.SGD(valuefnc.parameters(), lr = learning_rate, momentum = 0.9)
 for i in range(epochs):
 	valuefnc.generateSamples(policyNet)
 	X, y = valuefnc.oneReplicateEstimation()

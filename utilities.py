@@ -1,6 +1,5 @@
-
-
-
+import torch
+import numpy as np
 
 def ids_2dto1d(i, j, M, N):
     '''
@@ -27,7 +26,8 @@ def segmentTrainingData(X, y, batch_size):
     y_batch = []
     X_seg = []
     y_seg = []
-    for i in range(datalength):
+    perm = np.random.permutation(datalength)
+    for i in perm:
         if i % batch_size == 0:
             if len(y_seg) > 0:
                 X_batch.append(X_seg)
@@ -41,20 +41,31 @@ def segmentTrainingData(X, y, batch_size):
 
 
 def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
+    print("Training valueNet...")
     X_batch, y_batch = segmentTrainingData(X, y, batch_size)
-    size_data = len(y)
-    for i in range(y_batch):
-        X_seg = X_batch[i]
-        y_seg = y_batch[i]
-        pred = model(X_seg)
-        loss = loss_fn(pred, y)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    size_batch = len(y_batch)
+    perm = np.random.permutation(size_batch)
+    print("X:")
+    print(len(X))
+    print("X_batch")
+    print(len(X_batch))
+    train_iter = 300
+    for _ in range(train_iter):
+        for i in perm:
+            X_seg = X_batch[i]
+            y_seg = y_batch[i]
+            y_len = len(y_seg)
+            X_seg = torch.Tensor(X_seg)
+            y_seg = torch.reshape(torch.Tensor(y_seg), (y_len, 1))
+            pred = model(X_seg)
+            loss = loss_fn(pred, y_seg)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        if i % 10 == 0:
-            loss, current = loss.item(), i * len(X_seg)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size_data:>5d}]")
+            if i % 10 == 0:
+                loss, current = loss.item(), i * len(X_seg)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{len(y):>5d}]")
 
 
 

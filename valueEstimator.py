@@ -20,7 +20,7 @@ class valueEstimator(nn.Module):
             nn.Linear(250, 1),
             nn.ReLU()
         )#policy network
-        self.dataset_size = 1
+        self.dataset_size = 20
         self.dataset = []#it contains various car states
 
     def forward(self, x):
@@ -52,7 +52,7 @@ class valueEstimator(nn.Module):
         V = []
         for trial in self.dataset:
             v_sum = 0
-            for i in range(len(trial) - 1, -1, 0):
+            for i in range(len(trial) - 1, -1, -1):
                 datapiece = trial[i]
                 r = datapiece[0]
                 s = datapiece[1].numpy()

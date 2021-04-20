@@ -20,13 +20,14 @@ class valueEstimator(nn.Module):
             nn.Linear(250, 1),
             nn.ReLU()
         )#policy network
-        self.dataset_size = 2000
+        self.dataset_size = 1
         self.dataset = []#it contains various car states
 
     def forward(self, x):
         return self.linear_rellu_stack(x)
-    def generateSamples(self, policyNet):
+    def generateSamples(self, policyNet):#generate data according to a policy net
         for i in range(self.dataset_size):
+            print("iter: " + str(i))
             data_single_trial = []
             state = self.env.reset()
             state = torch.from_numpy(state.astype(np.float32))
@@ -42,14 +43,28 @@ class valueEstimator(nn.Module):
                     action_distrib = policyNet(state)
                     action = torch.multinomial(action_distrib, 1).item()
                     if feasible_act == True:
-                        data_piece.append(self.env.city_time)
-                        data_piece.append(self.env.i)
-                        data_piece.append(self.env.It)
                         data_piece.append(reward)
-                        data_piece.append(action)
                         data_piece.append(state)
                 data_single_trial.append(data_piece)
             self.dataset.append(data_single_trial)
+    def oneReplicateEstimation(self):
+        S = []
+        V = []
+        for trial in self.dataset:
+            v_sum = 0
+            for i in range(len(trial) - 1, -1, 0):
+                datapiece = trial[i]
+                r = datapiece[0]
+                s = datapiece[1].numpy()
+                v_sum += r
+                S.append(s)
+                V.append(v_sum)
+        return S, V
+
+
+
+
+
 
 
 

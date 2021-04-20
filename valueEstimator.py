@@ -13,19 +13,15 @@ class valueEstimator(nn.Module):
         out_put_size = env.R * env.R
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_size, 1024),
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.Linear(1024, 512),
             nn.Sigmoid(),
             nn.Linear(512, 256),
             nn.Sigmoid(),
-            nn.Linear(256, 128),
+            nn.Linear(256, 64),
             nn.Sigmoid(),
-            nn.Linear(128, 64),
-            nn.Sigmoid(),
-            nn.Linear(64, 32),
-            nn.Sigmoid(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
+            nn.Linear(64, 1),
+            nn.ReLU(),
         )#policy network
         self.dataset_size = 5
         self.dataset = []#it contains various car states

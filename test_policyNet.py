@@ -76,10 +76,10 @@ env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_stat
 policyNet = PolicyNet(env)
 valuefnc = valueEstimator(env)
 epochs = 2
-learning_rate = 1
-batch_size = 500
+learning_rate = 0.01
+batch_size = 1024
 loss_fn = nn.MSELoss()#for value network training
-optimizer = torch.optim.SGD(valuefnc.parameters(), lr = learning_rate, momentum = 0.9)
+optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
 for i in range(epochs):
 	valuefnc.generateSamples(policyNet)
 	X, y = valuefnc.oneReplicateEstimation()

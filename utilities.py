@@ -50,22 +50,22 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
     print("X_batch")
     print(len(X_batch))
     train_iter = 300
-    for _ in range(train_iter):
-        for i in perm:
+    for j in range(train_iter):
+        loss_sum = 0
+        for i in range(size_batch):
             X_seg = X_batch[i]
             y_seg = y_batch[i]
             y_len = len(y_seg)
             X_seg = torch.Tensor(X_seg)
-            y_seg = torch.reshape(torch.Tensor(y_seg), (y_len, 1))
+            y_seg = torch.Tensor(y_seg)
+            y_seg = torch.reshape(y_seg, (y_len, 1))
             pred = model(X_seg)
             loss = loss_fn(pred, y_seg)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            if i % 10 == 0:
-                loss, current = loss.item(), i * len(X_seg)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{len(y):>5d}]")
+            loss_sum += loss.item()   
+        print(f"loss: {loss_sum/size_batch:>7f}")
 
 
 

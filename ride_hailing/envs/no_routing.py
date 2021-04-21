@@ -6,7 +6,7 @@ import numpy as np
 RANDOM_SEED = 0  # unit test use this random seed.
 
 
-class CityReal(gym.Env):
+class CityReal_norouting(gym.Env):
     '''A real city is consists of R grids '''
 
     metadata = {'render.modes': ['human']}
@@ -131,7 +131,7 @@ class CityReal(gym.Env):
 
         #ensure there exists available cars
 
-        if np.sum(self.c_state[o][: self.patience_time]) <= 0:
+        if np.sum(self.c_state[o][: self.patience_time]) <= 0 and self.p_state[o][d] <= 0:
             return self.generate_state(), action, reward, False
 
         for tt1 in range(self.L + 1):

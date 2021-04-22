@@ -66,11 +66,17 @@ class CityReal_ma(gym.Env):
 
 
 
-    def generate_state(self):
-        state1 = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
-        state2 = np.reshape(np.array(self.p_state), (self.R ** 2) * self.L)
-        state = np.concatenate((state1, state2), axis = None)
-        state = np.concatenate((np.array(self.city_time),state), axis = None)
+    def generate_state(self, idx):
+        state_time = np.zeros(self.time_horizon)
+        state_time[int(self.city_time) - 1] = 1
+        state_car = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
+        local_p = np.sum(self.p_state[:, idx, :], 0)
+        global_p = np.sum(self.p_state, (0, 2))
+        state_p_local = np.reshape(np.array(local_p), self.R)
+        state_p_global = np.reshape(np.array(global_p), self.R)
+        state_grid = np.zeros(self.R)
+        state_grid[idx] = 1
+        state = np.concatenate((state_time, state_car, state_p_local, state_p_global, state_grid), axis = None)
         return state
 
 
@@ -79,6 +85,7 @@ class CityReal_ma(gym.Env):
         self.total_reward = 0
         self.city_time = 0
         self.c_state = self.starting_c_state
+        self.p_state = np.zeros(self.L, self.R, self.R)
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])

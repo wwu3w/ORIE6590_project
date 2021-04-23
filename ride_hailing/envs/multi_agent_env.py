@@ -2,7 +2,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
-from utilities import *
+from ride_hailing.envs.utilities import *
 
 RANDOM_SEED = 0  # unit test use this random seed.
 

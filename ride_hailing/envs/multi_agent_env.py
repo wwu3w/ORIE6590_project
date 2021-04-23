@@ -2,6 +2,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
+from utilities import *
 
 RANDOM_SEED = 0  # unit test use this random seed.
 
@@ -11,7 +12,7 @@ class CityReal_ma(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, R, tau_d, L, time_horizon, arrival_rate, trip_dest_prob, travel_time, c_state, capacity = 1000):
+    def __init__(self, M, N, R, tau_d, L, time_horizon, arrival_rate, trip_dest_prob, travel_time, c_state, capacity = 1000):
         """
         :param R: interger, number of grids.
         :param tau_d: the longest trip travel time
@@ -23,13 +24,18 @@ class CityReal_ma(gym.Env):
 
         """
         # City.__init__(self, M, N, n_side, time_interval)
+        self.M = M
+        self.N = N
         self.R = R
+        assert M * N == R
         self.tau_d = tau_d
         self.L = L
         self.curr_reward = 0
         self.total_reward = 0
         self.terminate = False
         self.num_neigbor = 6
+        self.neighbor_list = np.zeros((self.R, self.num_neigbor)) - 1
+        self.construct_map_neighbor()
 
         # parameters
         self.arrival_rate = arrival_rate
@@ -65,6 +71,14 @@ class CityReal_ma(gym.Env):
         self.observation_space = gym.spaces.MultiDiscrete(space_dim)
 
 
+    def construct_map_neighbor(self):
+        """Build node connection.
+        """
+        for grid_idx in range(self.R):
+            i, j = ids_1dto2d(idx, self.M, self.N)
+
+            for idx, neighbor_idx in enumerate(get_neighbor_list(i, j, self.M, self.N)):
+                self.neighbor_list[grid_idx, idx] = neighbor_idx
 
     def generate_state(self, idx):
         state_time = np.zeros(self.time_horizon)

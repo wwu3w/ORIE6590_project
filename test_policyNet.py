@@ -1,8 +1,7 @@
-from ride_hailing.envs.ride_hailing_env import *
 from evaluate import *
 from policyNetCentralized import *
 from valueEstimator import *
-from utilities import *
+from ride_hailing.envs.utilities import *
 import torch
 
 # Parameters for initialization

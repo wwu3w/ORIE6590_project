@@ -12,30 +12,30 @@ class valueEstimator(nn.Module):
         input_size = 1 + env.R * env.R + env.R * (env.tau_d + env.L) # time, passenger state, car state
         out_put_size = env.R * env.R
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, 1024),
+            nn.Linear(input_size, 4096),
             nn.ReLU(),
-            nn.Linear(1024, 512),
-            nn.Sigmoid(),
-            nn.Linear(512, 256),
-            nn.Sigmoid(),
-            nn.Linear(256, 64),
-            nn.Sigmoid(),
-            nn.Linear(64, 1),
+            nn.Linear(4096, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),
             nn.ReLU(),
         )#policy network
-        self.dataset_size = 5
+        self.dataset_size = 2
         self.dataset = []#it contains various car states
+        self.scale = 10
 
     def forward(self, x):
         return self.linear_relu_stack(x)
     def generateSamples(self, policyNet):#generate data according to a policy net
         print("Sampling data...")
         for i in range(self.dataset_size):
-            print("iter: " + str(i))
+            #print("iter: " + str(i))
             data_single_trial = []
             state = self.env.reset()
             state = torch.from_numpy(state.astype(np.float32))
             init_action_distrib = policyNet(state)
+
             init_action = torch.multinomial(init_action_distrib,1).item()
             action = init_action
             while self.env.city_time < self.env.time_horizon:
@@ -45,27 +45,40 @@ class valueEstimator(nn.Module):
                     state, old_action, reward, feasible_act = self.env.step(action)
                     state = torch.from_numpy(state.astype(np.float32))
                     action_distrib = policyNet(state)
+                    #print(action_distrib)
+                    #print(torch.sum(action_distrib))
                     action = torch.multinomial(action_distrib, 1).item()
+                    action_prob = action_distrib[action]
                     if feasible_act == True:
                         data_piece.append(reward)
                         data_piece.append(state)
+                        data_piece.append(action)
+                        data_piece.append(action_prob)
                 data_single_trial.append(data_piece)
             self.dataset.append(data_single_trial)
         print("Sampling data completed.")
     def oneReplicateEstimation(self):
         S = []
         V = []
+        R = []
+        Action = []
+        Prob = []
         for trial in self.dataset:
             v_sum = 0
             for i in range(len(trial) - 1, -1, -1):
                 datapiece = trial[i]
                 r = datapiece[0]
                 s = datapiece[1].numpy()
+                a = datapiece[2]
+                a_prob = datapiece[3]
                 v_sum += r
                 S.append(s)
                 V.append(v_sum)
+                Action.append(a)
+                R.append(r)
+                Prob.append(a_prob)
         self.dataset = []
-        return S, V
+        return S, V, Action, R, Prob
 
 
 

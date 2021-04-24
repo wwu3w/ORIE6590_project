@@ -1,8 +1,7 @@
 import torch
-import numpy as np
 from torch import nn
-from utilities import *
-import gym
+from ride_hailing.envs.utilities import *
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("Using {} device".format(device))
 class valueEstimator(nn.Module):

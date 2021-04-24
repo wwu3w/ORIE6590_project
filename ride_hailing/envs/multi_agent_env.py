@@ -2,16 +2,17 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
+from ride_hailing.envs.utilities import *
 
 RANDOM_SEED = 0  # unit test use this random seed.
 
 
-class CityReal(gym.Env):
+class CityReal_ma(gym.Env):
     '''A real city is consists of R grids '''
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, R, tau_d, L, time_horizon, arrival_rate, trip_dest_prob, travel_time, c_state, capacity = 1000):
+    def __init__(self, M, N, R, tau_d, L, time_horizon, arrival_rate, trip_dest_prob, travel_time, c_state, capacity = 1000):
         """
         :param R: interger, number of grids.
         :param tau_d: the longest trip travel time
@@ -23,13 +24,18 @@ class CityReal(gym.Env):
 
         """
         # City.__init__(self, M, N, n_side, time_interval)
+        self.M = M
+        self.N = N
         self.R = R
+        assert M * N == R
         self.tau_d = tau_d
         self.L = L
         self.curr_reward = 0
         self.total_reward = 0
         self.terminate = False
-
+        self.num_neigbor = 6
+        self.neighbor_list = np.zeros((self.R, self.num_neigbor)) - 1
+        self.construct_map_neighbor()
 
         # parameters
         self.arrival_rate = arrival_rate
@@ -43,30 +49,48 @@ class CityReal(gym.Env):
         self.city_time = 0
         self.starting_c_state = np.asarray(c_state)
         self.c_state = self.starting_c_state  # car state R * tau_d
-        self.p_state = np.zeros([R, R])  # passenger_state R * R
+        self.p_state = np.zeros([self.L, self.R, self.R])  # passenger_state R * R
         self.It = 0
         self.i = 0
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
 
 
         # Action
-        self.action_space = gym.spaces.Discrete(self.R ** 2)
+        self.action_space = gym.spaces.Discrete(self.R + self.num_neigbor)
         space_dim = []
-        for _ in range(self.time_horizon):
+        for _ in range(self.time_horizon): #one-hot for time
+            space_dim.append(int(1))
+        for _ in range(self.R): #one-hot for grid
             space_dim.append(int(1))
         for _ in range(self.R * self.tau_d): #car_state
             space_dim.append(int(capacity))
-        for _ in range(self.R * self.R): #passenger_state
+        for _ in range(self.R): #local passenger_state
+            space_dim.append(int(capacity))
+        for _ in range(self.R - 1): #global passenger_state
             space_dim.append(int(capacity))
         self.observation_space = gym.spaces.MultiDiscrete(space_dim)
 
 
+    def construct_map_neighbor(self):
+        """Build node connection.
+        """
+        for grid_idx in range(self.R):
+            i, j = ids_1dto2d(idx, self.M, self.N)
 
-    def generate_state(self):
-        state1 = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
-        state2 = np.reshape(np.array(self.p_state), self.R ** 2)
-        state = np.concatenate((state1, state2), axis = None)
-        state = np.concatenate((np.array(self.city_time),state), axis = None)
+            for idx, neighbor_idx in enumerate(get_neighbor_list(i, j, self.M, self.N)):
+                self.neighbor_list[grid_idx, idx] = neighbor_idx
+
+    def generate_state(self, idx):
+        state_time = np.zeros(self.time_horizon)
+        state_time[int(self.city_time) - 1] = 1
+        state_car = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
+        local_p = np.sum(self.p_state[:, idx, :], 0)
+        global_p = np.sum(self.p_state, (0, 2))
+        state_p_local = np.reshape(np.array(local_p), self.R)
+        state_p_global = np.reshape(np.array(global_p), self.R)
+        state_grid = np.zeros(self.R)
+        state_grid[idx] = 1
+        state = np.concatenate((state_time, state_car, state_p_local, state_p_global, state_grid), axis = None)
         return state
 
 
@@ -75,6 +99,7 @@ class CityReal(gym.Env):
         self.total_reward = 0
         self.city_time = 0
         self.c_state = self.starting_c_state
+        self.p_state = np.zeros(self.L, self.R, self.R)
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
@@ -84,7 +109,9 @@ class CityReal(gym.Env):
 
 
     def step_passenger_state_update(self):
-        self.p_state = np.zeros([self.R, self.R])
+        for ll in range(self.L - 1):
+            self.p_state[ll] = self.p_state[ll + 1]
+        self.p_state[self.L - 1] = np.zeros([self.R, self.R])
         self.generate_trip_request()
 
     def generate_trip_request(self):
@@ -97,7 +124,7 @@ class CityReal(gym.Env):
                 #print(dest_prob.shape())
                 trip_dest = np.random.choice(self.R, n_trip, p = dest_prob)
                 for dest_idx in trip_dest:
-                    self.p_state[idx][dest_idx] += 1
+                    self.p_state[self.L - 1, idx, dest_idx] += 1
 
     def step_car_state_update(self):
         for idx in range(self.R):
@@ -131,7 +158,7 @@ class CityReal(gym.Env):
 
         #ensure there exists available cars
 
-        if np.sum(self.c_state[o][: self.patience_time]) <= 0:
+        if np.sum(self.c_state[o,: self.patience_time]) <= 0:
             return self.generate_state(), action, reward, False
 
         for tt1 in range(self.L + 1):
@@ -141,9 +168,12 @@ class CityReal(gym.Env):
         tt2 = self.travel_time[self.city_time + tt1][o][d]
 
 
-        if self.p_state[o][d] > 0:
+        if np.sum(self.p_state[:,o,d]) > 0:
             reward = 1
-            self.p_state[o][d] -= 1
+            for ll in range(self.L):
+                if self.p_state[ll,o,d] > 0:
+                    self.p_state[ll,o,d] -= 1
+                    break
         else:
             reward = 0
             if o == d:

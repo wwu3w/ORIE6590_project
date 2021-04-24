@@ -20,6 +20,43 @@ def ids_1dto2d(ids, M, N):
     i = ids / N
     j = ids - N * i
     return (i, j)
+
+
+def get_neighbor_index(i, j):
+    """
+                 1
+             6       2
+                center
+             5       3
+                 4
+    return index of neighbor 1, 2, 3, 4, 5,6 in the matrix
+    """
+    neighbor_matrix_ids = []
+    if j % 2 == 0:
+        neighbor_matrix_ids = [[i - 1, j    ],
+                               [i,     j + 1],
+                               [i + 1, j + 1],
+                               [i + 1, j    ],
+                               [i + 1, j - 1],
+                               [i    , j - 1]]
+    elif j % 2 == 1:
+        neighbor_matrix_ids = [[i - 1, j    ],
+                               [i - 1, j + 1],
+                               [i    , j + 1],
+                               [i + 1, j    ],
+                               [i    , j - 1],
+                               [i - 1, j - 1]]
+
+    return neighbor_matrix_ids
+
+def get_neighbor_list(i, j, M, N):
+    neighbor_list = []
+    for ii, jj in get_neighbor_index(i ,j):
+        if ii in range(M) and jj in range(N):
+            neighbor_list.append(ids_2dto1d(ii, jj, M, N))
+
+    return neighbor_list
+
 def segmentTrainingData(X, y, batch_size):
     datalength = len(y)
     X_batch = []

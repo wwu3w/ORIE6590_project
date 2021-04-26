@@ -79,11 +79,11 @@ learning_rate = 0.0001
 batch_size = 2048
 loss_fn = nn.MSELoss()#for value network training
 optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
-optimizer_policy = torch.optim.SGD(policyNet.parameters(), lr = 0.001)
+optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = 0.0001)
 for i in range(epochs):
 	valuefnc.generateSamples(policyNet)
 	X, y, Action, R, Prob = valuefnc.oneReplicateEstimation()#training data for value function
-	#trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
+	trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
 	trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, loss_fn, optimizer_policy,  valuefnc)
 
 

@@ -113,7 +113,7 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
     print("Training valueNet...")
     X_batch, y_batch = segmentTrainingData(X, y, batch_size)
     size_batch = len(y_batch)
-    train_iter = 2
+    train_iter = 25
     for j in range(train_iter):
         loss_sum = 0
         weight_sum = 0
@@ -154,8 +154,11 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, loss_fn, optimizer,
             pred = []
             for x in X_seg:
                 pred.append(policymodel(x))
-            cost = policymodel.evalCost(X_seg, pred, R_seg, Act_seg, Prob_seg, valuefnc)
-            loss = loss_fn(output, torch.zeros(8))
+            pred = torch.stack(pred)
+            R_seg = torch.Tensor(R_seg)
+            Act_seg = torch.Tensor(Act_seg)
+            Prob_seg = torch.Tensor(Prob_seg)
+            loss = policymodel.evalCost(X_seg, pred, R_seg, Act_seg, Prob_seg, valuefnc)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

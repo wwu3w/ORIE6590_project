@@ -163,7 +163,7 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, loss_fn, optimizer,
             loss.backward()
             optimizer.step()
             loss_sum += loss.item()
-        print(f"PolicyTrain loss: {loss_sum / size_batch:>7f}")
+        print(f"PolicyTrain Objective: {-loss_sum / size_batch:>7f}")
 
 
 

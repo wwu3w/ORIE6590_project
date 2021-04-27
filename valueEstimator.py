@@ -44,8 +44,6 @@ class valueEstimator(nn.Module):
                     state, old_action, reward, feasible_act = self.env.step(action)
                     state = torch.from_numpy(state.astype(np.float32))
                     action_distrib = policyNet(state)
-                    #print(action_distrib)
-                    #print(torch.sum(action_distrib))
                     action = torch.multinomial(action_distrib, 1).item()
                     action_prob = action_distrib[action]
                     if feasible_act == True:

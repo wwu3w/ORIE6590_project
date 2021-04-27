@@ -139,7 +139,7 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
     print("ValueNet Training Completed.")
     print("\n")
 
-def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, loss_fn, optimizer,  valuefnc):
+def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefnc):
     print("Training policyNet...")
     X_batch, R_batch, Act_batch, Prob_batch = segmentPolicyTrainingData(X, R, Act, Prob, batch_size)
     size_batch = len(R_batch)

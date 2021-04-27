@@ -84,6 +84,6 @@ for i in range(epochs):
 	valuefnc.generateSamples(policyNet)
 	X, y, Action, R, Prob = valuefnc.oneReplicateEstimation()#training data for value function
 	trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
-	trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, loss_fn, optimizer_policy,  valuefnc)
+	trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, optimizer_policy,  valuefnc)
 
 

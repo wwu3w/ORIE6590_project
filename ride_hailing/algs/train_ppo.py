@@ -80,14 +80,14 @@ env.reset()
 
 max_training_timesteps = int(20)  # break training loop if timeteps > max_training_timesteps
 
-
+num_simulation = 300
 K_epochs = 100  # update policy for K epochs in one PPO update
 
 eps_clip = 0.2  # clip parameter for PPO
 gamma = 1  # discount factor
 
-lr_actor = 0.0003  # learning rate for actor network
-lr_critic = 0.001  # learning rate for critic network
+lr_actor = 0.00005  # learning rate for actor network
+lr_critic = 0.0001  # learning rate for critic network
 
 random_seed = 0  # set random seed if required (0 = no random seed)
 
@@ -119,24 +119,27 @@ while time_step <= max_training_timesteps:
 
     state = env.reset()
 
-    current_ep_reward = 0
 
-    # Loop for a whole time horizon of the ride-hailing system
-    while env.city_time < env.time_horizon:
-        feasible_act = False
-        while not feasible_act and env.city_time < env.time_horizon:
+    for _ in range(num_simulation):
+        state = env.reset()
+        # Loop for a whole time horizon of the ride-hailing system
+        while not env.terminate:
+            feasible_act = False
+            while not feasible_act and not env.terminate:
             # select action with policy
-            action, state_buffer, action_buffer, logprob_buffer = agent.select_action(state)
-            state, action, reward, feasible_act = env.step(action)
+                action, state_buffer, action_buffer, logprob_buffer = agent.select_action(state)
+                state, action, reward, feasible_act = env.step(action)
 
-        agent.buffer.save(action_buffer, state_buffer, logprob_buffer, reward)
+            agent.buffer.save(action_buffer, state_buffer, logprob_buffer, reward, env.city_time, torch.FloatTensor(state))
+        agent.buffer.update(gamma)
+
 
     time_step += 1
 
-    print("Timestep : {} \t\t Average Reward : {}".format(time_step, env.total_reward))
+    print("Timestep : {} \t\t Average Reward : {}".format(time_step, np.array(agent.buffer.total_rewards).mean()))
 
     # update PPO agent
-    agent.update()
+    agent.update(64)
 
 
 

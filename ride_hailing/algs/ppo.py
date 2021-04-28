@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 class PPO:
     def __init__(self, lr_actor, lr_critic, gamma, K_epochs, buffer, model, eps_clip):
@@ -31,46 +31,51 @@ class PPO:
 
         return action.item(), state, action, action_logprob
 
-    def update(self):
+    def batchsample(self, mini_batch_size):
+        batch_size = len(self.buffer.rewards)
+        sampler = BatchSampler(SubsetRandomSampler(range(batch_size)),mini_batch_size,drop_last=True)
+        return sampler
 
-        # Monte Carlo estimate of returns
-        rewards = []
-        discounted_reward = 0
-        for reward in reversed(self.buffer.rewards):
+    def update(self, mini_batch_size = 64):
 
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
-
-        # Normalizing the rewards
-        rewards = torch.tensor(rewards, dtype=torch.float32)#.to(device)
-        #rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
+        #sampler = self.batchsample(mini_batch_size)
         # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach()#.to(device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach()#.to(device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach()#.to(device)
+        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach()  # .to(device)
+        old_next_states = torch.squeeze(torch.stack(self.buffer.next_states, dim=0)).detach()  # .to(device)
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach()  # .to(device)
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach()  # .to(device)
+        value_targets = torch.FloatTensor(self.buffer.value_targets)
+        rewards = torch.FloatTensor(self.buffer.rewards)
+
 
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
-            # Evaluating old actions and values
+
+            #for indices in sampler:
+
+
+
+                # Evaluating old actions and values
             logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+            next_state_values = self.policy.critic(old_next_states)
 
-            # match state_values tensor dimensions with rewards tensor
+                # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
+            next_state_values = torch.squeeze(next_state_values)
 
-
-            # Finding the ratio (pi_theta / pi_theta__old)
+                # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
 
-            # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()
+                # Finding Surrogate Loss
+            advantages = rewards + next_state_values.detach() - state_values.detach()
+            advantages = (advantages - advantages.mean())/(advantages.std() + 1e-7)
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
 
-            # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MSELoss(state_values, rewards) - 0.01 * dist_entropy
+                # final loss of clipped objective PPO
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MSELoss(state_values, value_targets) - 0.01 * dist_entropy
 
-            # take gradient step
+                # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()

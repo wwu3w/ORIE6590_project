@@ -24,6 +24,7 @@ class CityReal_ma(gym.Env):
 
         """
         # City.__init__(self, M, N, n_side, time_interval)
+        self.idx = 0
         self.M = M
         self.N = N
         self.R = R
@@ -75,37 +76,38 @@ class CityReal_ma(gym.Env):
         """Build node connection.
         """
         for grid_idx in range(self.R):
-            i, j = ids_1dto2d(idx, self.M, self.N)
+            i, j = ids_1dto2d(grid_idx, self.M, self.N)
 
             for idx, neighbor_idx in enumerate(get_neighbor_list(i, j, self.M, self.N)):
                 self.neighbor_list[grid_idx, idx] = neighbor_idx
 
-    def generate_state(self, idx):
+    def generate_state(self):
         state_time = np.zeros(self.time_horizon)
         state_time[int(self.city_time) - 1] = 1
         state_car = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
-        local_p = np.sum(self.p_state[:, idx, :], 0)
+        local_p = np.sum(self.p_state[:, self.idx, :], 0)
         global_p = np.sum(self.p_state, (0, 2))
         state_p_local = np.reshape(np.array(local_p), self.R)
         state_p_global = np.reshape(np.array(global_p), self.R)
         state_grid = np.zeros(self.R)
-        state_grid[idx] = 1
+        state_grid[self.idx] = 1
         state = np.concatenate((state_time, state_car, state_p_local, state_p_global, state_grid), axis = None)
         return state
 
 
 
     def reset(self):
+        self.idx = 0
         self.total_reward = 0
         self.city_time = 0
         self.c_state = self.starting_c_state
-        self.p_state = np.zeros(self.L, self.R, self.R)
+        self.p_state = np.zeros((self.L, self.R, self.R))
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
         self.i = 0
         self.terminate = False
-        return self.generate_state()
+        #return self.generate_state()
 
 
     def step_passenger_state_update(self):
@@ -140,53 +142,55 @@ class CityReal_ma(gym.Env):
         self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d-1)] += 1
 
     def step_time_update(self):
-        self.i = 0
+        self.idx = 0
+        self.i = np.zeros(self.R)
         self.step_car_state_update()
         self.step_passenger_state_update()
         self.city_time += 1
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
+        self.It = np.sum(self.c_state[:, 0:self.patience_time], 1)
         #print(self.i, self.It, self.city_time)
 
     def step(self, action):
 
         reward = 0
 
-
         #action = np.random.choice(range(self.R * self.R), 1, policy)[0]
-        o, d = np.divmod(int(action), int(self.R))
+        if action < self.R:
+            dest_idx = int(action)
+            if np.sum(self.p_state[:, self.idx, dest_idx]) <= 0:
+                return [], action, reward, False
 
-        #ensure there exists available cars
+        else:
+            dest_idx = self.neighbor_list[int(action - self.R)]
+            if dest_idx < 0:
+                return [], action, reward, False
 
-        if np.sum(self.c_state[o,: self.patience_time]) <= 0:
-            return self.generate_state(), action, reward, False
+        tt = self.travel_time[self.city_time, self.idx, dest_idx]
 
-        for tt1 in range(self.L + 1):
-            if self.c_state[o][tt1] > 0:
-                break
-
-        tt2 = self.travel_time[self.city_time + tt1][o][d]
-
-
-        if np.sum(self.p_state[:,o,d]) > 0:
+        if np.sum(self.p_state[:, self.idx, dest_idx]) > 0:
             reward = 1
             for ll in range(self.L):
-                if self.p_state[ll,o,d] > 0:
-                    self.p_state[ll,o,d] -= 1
+                if self.p_state[ll, self.idx, dest_idx] > 0:
+                    self.p_state[ll, self.idx, dest_idx] -= 1
                     break
         else:
             reward = 0
-            if o == d:
-                tt2 = 0
+            if self.idx == dest_idx:
+                tt = 0
 
-        self.step_change_dest(o, d, tt1, tt2)
+        self.step_change_dest(self.idx, dest_idx, 0, tt)
         self.total_reward += reward
 
-        self.i += 1
+        self.i[self.idx] += 1
 
         output_state = self.generate_state()
         #print(self.i, self.It, self.city_time)
-        while self.It <= self.i and self.city_time < self.time_horizon:
+
+        if self.i[self.idx] >= self.It[self.idx]:
+            self.idx += 1
+
+        while self.R <= self.idx  and self.city_time < self.time_horizon:
             self.step_time_update()
             if self.city_time == self.time_horizon:
                 self.terminate = True

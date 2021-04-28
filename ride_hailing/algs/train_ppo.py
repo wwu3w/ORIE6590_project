@@ -1,8 +1,9 @@
-from evaluate import *
-from policyNetCentralized import *
-from valueEstimator import *
+from ride_hailing.envs.ride_hailing_env import *
+from ride_hailing.algs.ppo import *
+from ride_hailing.algs.storage import *
+from ride_hailing.algs.actorcritic import *
+from datetime import datetime
 
-import torch
 
 # Parameters for initialization
 R = 5
@@ -72,18 +73,84 @@ for i in range(H):
 # Initialize the whole environment
 
 env = CityReal(R, tau_d, L, H, arrival_rate, trip_dest_prob, travel_time, c_state)
-policyNet = PolicyNet(env)
-valuefnc = valueEstimator(env)
-epochs = 10
-learning_rate = 0.0001
-batch_size = 2048
-loss_fn = nn.MSELoss()#for value network training
-optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
-optimizer_policy = torch.optim.SGD(policyNet.parameters(), lr = 0.001)
-for i in range(epochs):
-	valuefnc.generateSamples(policyNet)
-	X, y, Action, R, Prob = valuefnc.oneReplicateEstimation()#training data for value function
-	#trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
-	trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, loss_fn, optimizer_policy,  valuefnc)
+env.reset()
+
+
+################ PPO hyperparameters ################
+
+max_training_timesteps = int(20)  # break training loop if timeteps > max_training_timesteps
+
+
+K_epochs = 100  # update policy for K epochs in one PPO update
+
+eps_clip = 0.2  # clip parameter for PPO
+gamma = 1  # discount factor
+
+lr_actor = 0.0003  # learning rate for actor network
+lr_critic = 0.001  # learning rate for critic network
+
+random_seed = 0  # set random seed if required (0 = no random seed)
+
+#####################################################
+
+state_dim = env.observation_space.shape[0]
+print(state_dim)
+act_dim = env.action_space.n
+model = ActorCritic(state_dim, act_dim)
+buffer = RolloutBuffer()
+agent = PPO(lr_actor, lr_critic, gamma, K_epochs, buffer, model, eps_clip)
+
+start_time = datetime.now().replace(microsecond=0)
+print("Started training at (GMT) : ", start_time)
+
+print("============================================================================================")
+
+# printing and logging variables
+print_running_reward = 0
+print_running_episodes = 0
+
+log_running_reward = 0
+log_running_episodes = 0
+
+time_step = 0
+i_episode = 0
+
+while time_step <= max_training_timesteps:
+
+    state = env.reset()
+
+    current_ep_reward = 0
+
+    # Loop for a whole time horizon of the ride-hailing system
+    while env.city_time < env.time_horizon:
+        feasible_act = False
+        while not feasible_act and env.city_time < env.time_horizon:
+            # select action with policy
+            action, state_buffer, action_buffer, logprob_buffer = agent.select_action(state)
+            state, action, reward, feasible_act = env.step(action)
+
+        agent.buffer.save(action_buffer, state_buffer, logprob_buffer, reward)
+
+    time_step += 1
+
+    print("Timestep : {} \t\t Average Reward : {}".format(time_step, env.total_reward))
+
+    # update PPO agent
+    agent.update()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

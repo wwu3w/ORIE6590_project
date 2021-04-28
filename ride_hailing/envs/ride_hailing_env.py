@@ -49,12 +49,14 @@ class CityReal(gym.Env):
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
 
 
-        # Action
+        # Action dimension and State dimension
+        #self.action_dim = self.R ** 2
+        #self.state_dim = self.time_horizon + self.R * self.tau_d + self.R * self.R
         self.action_space = gym.spaces.Discrete(self.R ** 2)
         space_dim = []
         for _ in range(self.time_horizon):
             space_dim.append(int(1))
-        for _ in range(self.R * self.tau_d): #car_state
+        for _ in range(self.R * (self.tau_d + self.L)): #car_state
             space_dim.append(int(capacity))
         for _ in range(self.R * self.R): #passenger_state
             space_dim.append(int(capacity))
@@ -63,10 +65,12 @@ class CityReal(gym.Env):
 
 
     def generate_state(self):
-        state1 = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
-        state2 = np.reshape(np.array(self.p_state), self.R ** 2)
-        state = np.concatenate((state1, state2), axis = None)
-        state = np.concatenate((np.array(self.city_time),state), axis = None)
+        state_time = np.zeros(self.time_horizon)
+        state_time[self.city_time] = 1
+        state_c = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
+        state_p = np.reshape(np.array(self.p_state), self.R ** 2)
+        state = np.concatenate((state_time, state_c, state_p), axis=None)
+
         return state
 
 

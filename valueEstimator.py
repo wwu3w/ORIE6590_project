@@ -1,9 +1,7 @@
-import torch
 from torch import nn
 from ride_hailing.envs.utilities import *
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print("Using {} device".format(device))
 class valueEstimator(nn.Module):
     def __init__(self, env):
         super(valueEstimator, self).__init__()
@@ -29,7 +27,7 @@ class valueEstimator(nn.Module):
     def generateSamples(self, policyNet):#generate data according to a policy net
         print("Sampling data...")
         for i in range(self.dataset_size):
-            #print("iter: " + str(i))
+            print("iter: " + str(i+1) + "/" +str(self.dataset_size))
             data_single_trial = []
             state = self.env.reset()
             state = torch.from_numpy(state.astype(np.float32))
@@ -44,8 +42,6 @@ class valueEstimator(nn.Module):
                     state, old_action, reward, feasible_act = self.env.step(action)
                     state = torch.from_numpy(state.astype(np.float32))
                     action_distrib = policyNet(state)
-                    #print(action_distrib)
-                    #print(torch.sum(action_distrib))
                     action = torch.multinomial(action_distrib, 1).item()
                     action_prob = action_distrib[action]
                     if feasible_act == True:

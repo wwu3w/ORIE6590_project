@@ -110,10 +110,11 @@ def segmentPolicyTrainingData(X, R, Act, Prob, batch_size):
     return X_batch, R_batch, Act_batch, Prob_batch
 
 def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Training valueNet...")
     X_batch, y_batch = segmentTrainingData(X, y, batch_size)
     size_batch = len(y_batch)
-    train_iter = 2
+    train_iter = 30
     for j in range(train_iter):
         loss_sum = 0
         weight_sum = 0
@@ -124,8 +125,8 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
             X_seg = torch.Tensor(X_seg)
             y_seg = torch.Tensor(y_seg) / model.scale #scale down 10 times to improve training performance
             y_seg = torch.reshape(y_seg, (y_len, 1))
-            pred = model(X_seg)
-            loss = loss_fn(pred, y_seg)
+            pred = model(X_seg.to(device))
+            loss = loss_fn(pred, y_seg.to(device))
             optimizer.zero_grad()
             lambda2 = 0.01
             all_linear2_params = torch.cat([x.view(-1) for x in model.parameters()])
@@ -139,7 +140,8 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
     print("ValueNet Training Completed.")
     print("\n")
 
-def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, loss_fn, optimizer,  valuefnc):
+def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefnc):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Training policyNet...")
     X_batch, R_batch, Act_batch, Prob_batch = segmentPolicyTrainingData(X, R, Act, Prob, batch_size)
     size_batch = len(R_batch)
@@ -153,14 +155,17 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, loss_fn, optimizer,
             Prob_seg = Prob_batch[i]
             pred = []
             for x in X_seg:
-                pred.append(policymodel(x))
-            cost = policymodel.evalCost(X_seg, pred, R_seg, Act_seg, Prob_seg, valuefnc)
-            loss = loss_fn(output, torch.zeros(8))
+                pred.append(policymodel(x.to(device)))
+            pred = torch.stack(pred)
+            R_seg = torch.Tensor(R_seg)
+            Act_seg = torch.Tensor(Act_seg)
+            Prob_seg = torch.Tensor(Prob_seg)
+            loss = policymodel.evalCost(X_seg.to(device), pred.to(device), R_seg.to(device), Act_seg.to(device), Prob_seg.to(device), valuefnc)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             loss_sum += loss.item()
-        print(f"PolicyTrain loss: {loss_sum / size_batch:>7f}")
+        print(f"PolicyTrain Objective: {-loss_sum / size_batch:>7f}")
 
 
 

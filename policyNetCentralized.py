@@ -1,10 +1,8 @@
 import torch
-import numpy as np
 from torch import nn
 import gym
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print("Using {} device".format(device))
 class PolicyNet(nn.Module):
     def __init__(self, env):
         super(PolicyNet, self).__init__()
@@ -30,29 +28,15 @@ class PolicyNet(nn.Module):
 
     def evalCost(self, state_input, pred, R, Act, Prob, valuefnc):
         datalength = len(R)
-        tot_cost = 0.0
-        for i in range(datalength-1):
-            r = R[i] #reward
-            a = Act[i] #action
+        Act = Act.to(torch.long)
+        vals = valuefnc(state_input) * valuefnc.scale
+        action_prs = pred[torch.arange(datalength), Act]
+        ratio = torch.div(action_prs, Prob)
+        tot_cost = torch.clamp(ratio[0:datalength-1], 1 - self.epsilon, 1 + self.epsilon) * (R[0:datalength-1] + torch.reshape(torch.transpose(vals[1:datalength] - vals[0:datalength-1], 0, 1), (datalength-1,)))
+        return -torch.sum(tot_cost/valuefnc.dataset_size)
 
-            a_distribution = pred[i]
-            #print(a_distribution)
-            state = state_input[i]
-            #print(state)
-            state_next = state_input[i+1]
-            val = valuefnc(state) * valuefnc.scale
-            val_next = valuefnc(state_next) * valuefnc.scale
-            pr = Prob[i]
-            Advantfnc = r + val_next - val
-            ratio = a_distribution[a]/pr
-            #print("a_distribution", a_distribution)
-            #print("act", a)
-            #print("pr", pr)
-            print("ratio", ratio)
-            ratio = np.clip(ratio.item(), 1 - self.epsilon, 1 + self.epsilon)
 
-            tot_cost += ratio * Advantfnc
-        return tot_cost/valuefnc.dataset_size
+
 
 
 

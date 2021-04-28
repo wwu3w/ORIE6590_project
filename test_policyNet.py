@@ -4,6 +4,8 @@ from valueEstimator import *
 from ride_hailing.envs.utilities import *
 import torch
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using {} device".format(device))
 # Parameters for initialization
 R = 5
 N = 1000 #number of cars
@@ -80,9 +82,14 @@ batch_size = 2048
 loss_fn = nn.MSELoss()#for value network training
 optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
 optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = 0.0001)
+
 for i in range(epochs):
+	valuefnc.to("cpu")
+	policyNet.to("cpu")
 	valuefnc.generateSamples(policyNet)
 	X, y, Action, R, Prob = valuefnc.oneReplicateEstimation()#training data for value function
+	valuefnc.to(device)
+	policyNet.to(device)
 	trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
 	trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, optimizer_policy,  valuefnc)
 

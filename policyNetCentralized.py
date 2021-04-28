@@ -1,10 +1,8 @@
 import torch
-import numpy as np
 from torch import nn
 import gym
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print("Using {} device".format(device))
 class PolicyNet(nn.Module):
     def __init__(self, env):
         super(PolicyNet, self).__init__()

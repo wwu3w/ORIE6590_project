@@ -43,11 +43,10 @@ tau_d = np.max(tau1)
 c_state = np.zeros((R, tau_d + L))
 tot_unassigned = N
 num_empty_cell = R*tau_d
+proportion = lambda1/np.sum(lambda1)
 for i in range(R):
-	for j in range(tau_d):
-		c_state[i,j] = int(np.floor(tot_unassigned/(num_empty_cell)))
-		tot_unassigned -= c_state[i,j]
-		num_empty_cell -= 1
+	c_state[i,0]= int(N * proportion[i])
+print(c_state)
 travel_time = np.zeros((H,R,R))
 trip_dest_prob = np.zeros((H,R,R))
 arrival_rate = np.zeros((H,R))
@@ -77,8 +76,8 @@ def model(state, env):
     return env.action_space.sample()
 
 numiters = 10  #iteration number
-r, r_sqr = evaluate(model, env, numiters)
+r= evaluate(model, env, numiters)
 #print(np.mean(r) )
 #print(np.sqrt(np.square(r).mean() - np.mean(r) ** 2))
 print(r)
-print(r_sqr)
+#print(r_sqr)

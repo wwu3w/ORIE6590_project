@@ -48,10 +48,8 @@ c_state = np.zeros((R, tau_d + L))
 tot_unassigned = N
 num_empty_cell = R*tau_d
 for i in range(R):
-	for j in range(tau_d):
-		c_state[i,j] = int(np.floor(tot_unassigned/(num_empty_cell)))
-		tot_unassigned -= c_state[i,j]
-		num_empty_cell -= 1
+	c_state[i,0] = N/R
+#print(c_state)
 travel_time = np.zeros((H,R,R))
 trip_dest_prob = np.zeros((H,R,R))
 arrival_rate = np.zeros((H,R))
@@ -78,10 +76,10 @@ env.reset()
 
 ################ PPO hyperparameters ################
 
-max_training_timesteps = int(20)  # break training loop if timeteps > max_training_timesteps
+max_training_timesteps = 70  # break training loop if timeteps > max_training_timesteps
 
-num_simulation = 300
-K_epochs = 100  # update policy for K epochs in one PPO update
+num_simulation = 5
+K_epochs = 50  # update policy for K epochs in one PPO update
 
 eps_clip = 0.2  # clip parameter for PPO
 gamma = 1  # discount factor
@@ -98,7 +96,7 @@ print(state_dim)
 act_dim = env.action_space.n
 model = ActorCritic(state_dim, act_dim)
 buffer = RolloutBuffer()
-agent = PPO(lr_actor, lr_critic, gamma, K_epochs, buffer, model, eps_clip)
+agent = PPO(gamma, K_epochs, buffer, model, eps_clip)
 
 start_time = datetime.now().replace(microsecond=0)
 print("Started training at (GMT) : ", start_time)
@@ -118,7 +116,7 @@ i_episode = 0
 while time_step <= max_training_timesteps:
 
     state = env.reset()
-
+    performance = []
 
     for _ in range(num_simulation):
         state = env.reset()
@@ -132,14 +130,18 @@ while time_step <= max_training_timesteps:
 
             agent.buffer.save(action_buffer, state_buffer, logprob_buffer, reward, env.city_time, torch.FloatTensor(state))
         agent.buffer.update(gamma)
+        performance.append(env.total_reward/env.num_request)
 
 
     time_step += 1
 
-    print("Timestep : {} \t\t Average Reward : {}".format(time_step, np.array(agent.buffer.total_rewards).mean()))
+    print("Timestep : {} \t\t Average Reward : {}".format(time_step, np.array(performance).mean()))
 
     # update PPO agent
-    agent.update(64)
+    lr_c = max(1 - time_step/max_training_timesteps, 0.01) * lr_critic
+    lr_a = max(1 - time_step/max_training_timesteps, 0.01) * lr_actor
+    eps = max((1 - time_step/max_training_timesteps) * eps_clip, 0.01)
+    agent.update(64, lr_a, lr_c, eps)
 
 
 

@@ -4,7 +4,7 @@ import torch.optim as optim
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 class PPO:
-    def __init__(self, lr_actor, lr_critic, gamma, K_epochs, buffer, model, eps_clip):
+    def __init__(self, gamma, K_epochs, buffer, model, eps_clip):
 
         self.gamma = gamma
         self.eps_clip = eps_clip
@@ -12,10 +12,7 @@ class PPO:
         self.buffer = buffer
 
         self.policy = model
-        self.optimizer = optim.Adam([
-            {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-            {'params': self.policy.critic.parameters(), 'lr': lr_critic}
-        ])
+
 
         self.policy_old = model
         self.policy_old.load_state_dict(self.policy.state_dict())
@@ -36,7 +33,12 @@ class PPO:
         sampler = BatchSampler(SubsetRandomSampler(range(batch_size)),mini_batch_size,drop_last=True)
         return sampler
 
-    def update(self, mini_batch_size = 64):
+    def update(self, mini_batch_size, lr_actor, lr_critic, eps_clip):
+        self.eps_clip = eps_clip
+        self.optimizer = optim.Adam([
+            {'params': self.policy.actor.parameters(), 'lr': lr_actor},
+            {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+        ])
 
         #sampler = self.batchsample(mini_batch_size)
         # convert list to tensor
@@ -73,7 +75,7 @@ class PPO:
             surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
 
                 # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MSELoss(state_values, value_targets) - 0.01 * dist_entropy
+            loss = -torch.min(surr1, surr2) + 1 * self.MSELoss(state_values, value_targets) - 0.01 * dist_entropy
 
                 # take gradient step
             self.optimizer.zero_grad()

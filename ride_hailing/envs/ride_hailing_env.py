@@ -28,6 +28,7 @@ class CityReal(gym.Env):
         self.curr_reward = 0
         self.total_reward = 0
         self.terminate = False
+        self.num_request = 0
 
 
         # parameters
@@ -53,8 +54,8 @@ class CityReal(gym.Env):
         #self.state_dim = self.time_horizon + self.R * self.tau_d + self.R * self.R
         self.action_space = gym.spaces.Discrete(self.R ** 2)
         space_dim = []
-        for _ in range(self.time_horizon):
-            space_dim.append(int(1))
+
+        space_dim.append(int(self.time_horizon))
         for _ in range(self.R * (self.tau_d + self.L)): #car_state
             space_dim.append(int(capacity))
         for _ in range(self.R * self.R): #passenger_state
@@ -76,11 +77,12 @@ class CityReal(gym.Env):
 
     def reset(self):
         self.total_reward = 0
+        self.num_request = 0
         self.city_time = 0
         self.c_state = deepcopy(self.starting_c_state)
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
+        self.It = np.sum(self.c_state[: ,0:self.patience_time])
         self.i = 0
         self.terminate = False
         return self.generate_state()
@@ -89,6 +91,7 @@ class CityReal(gym.Env):
     def step_passenger_state_update(self):
         self.p_state = np.zeros([self.R, self.R])
         self.generate_trip_request()
+        self.num_request += np.sum(self.p_state)
 
     def generate_trip_request(self):
         for idx in range(self.R):
@@ -106,8 +109,8 @@ class CityReal(gym.Env):
         for idx in range(self.R):
             for t in range(1, self.tau_d):
                 n_car = self.c_state[idx][t]
-                if n_car == 0:
-                    continue
+                #if n_car == 0:
+                #    continue
                 self.c_state[idx][t - 1] += n_car
                 self.c_state[idx][t] = 0
 
@@ -121,7 +124,7 @@ class CityReal(gym.Env):
         self.step_passenger_state_update()
         self.city_time += 1
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
+        self.It = np.sum(self.c_state[:,0:self.patience_time])
         #print(self.i, self.It, self.city_time)
 
     def is_action_feasible(self, action):
@@ -143,7 +146,7 @@ class CityReal(gym.Env):
 
         #ensure there exists available cars
 
-        if np.sum(self.c_state[o][: self.patience_time]) <= 0:
+        if np.sum(self.c_state[o,: self.patience_time]) <= 0:
             return self.generate_state(), action, reward, False
 
         for tt1 in range(self.L + 1):
@@ -165,14 +168,21 @@ class CityReal(gym.Env):
         self.total_reward += reward
 
         self.i += 1
+        #next_state = self.generate_state()
 
-        output_state = self.generate_state()
         #print(self.i, self.It, self.city_time)
         while self.It <= self.i and self.city_time < self.time_horizon:
             self.step_time_update()
             if self.city_time == self.time_horizon:
                 self.terminate = True
 
+<<<<<<< HEAD
         return output_state, action, reward, True
+=======
+        next_state = self.generate_state()
+
+
+        return next_state, action, reward, True
+>>>>>>> f091de59479e54ad00f8f26f19d66ac626f03758
 
 

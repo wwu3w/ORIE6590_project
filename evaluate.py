@@ -2,8 +2,7 @@
 from ride_hailing.envs.ride_hailing_env import *
 
 def evaluate(model, env, numiters):
-    r = 0
-    r_square = 0
+    r = []
     # Start to iterate simulation loops
     for i in range(numiters):
         state = env.reset()
@@ -14,9 +13,9 @@ def evaluate(model, env, numiters):
                 action = model(state, env)
                 state, action, reward, feasible_act = env.step(action)
         #print(i, numiters)
-        r += env.total_reward
-        r_square += env.total_reward ** 2
+        r.append(env.total_reward/env.num_request)
+        #r_square += env.total_reward ** 2
 
-    mean_reward = r/numiters
-    sd_reward = np.sqrt(r_square/numiters - mean_reward ** 2)
-    return mean_reward, sd_reward
+    #mean_reward = r/numiters
+    #sd_reward = np.sqrt(r_square/numiters - mean_reward ** 2)
+    return np.array(r).mean()

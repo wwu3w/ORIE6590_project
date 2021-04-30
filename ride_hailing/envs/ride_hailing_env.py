@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+from copy import deepcopy
 
 RANDOM_SEED = 0  # unit test use this random seed.
 
@@ -40,7 +41,7 @@ class CityReal(gym.Env):
         # States
         self.city_time = 0
         self.starting_c_state = np.asarray(c_state)
-        self.c_state = self.starting_c_state  # car state R * tau_d
+        self.c_state = deepcopy(self.starting_c_state)  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
         self.It = 0
         self.i = 0
@@ -63,8 +64,8 @@ class CityReal(gym.Env):
 
 
     def generate_state(self):
-        state_time = np.zeros(self.time_horizon)
-        state_time[self.city_time] = 1
+        #state_time = np.zeros(self.time_horizon)
+        state_time = self.city_time
         state_c = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
         state_p = np.reshape(np.array(self.p_state), self.R ** 2)
         state = np.concatenate((state_time, state_c, state_p), axis=None)
@@ -76,7 +77,7 @@ class CityReal(gym.Env):
     def reset(self):
         self.total_reward = 0
         self.city_time = 0
-        self.c_state = self.starting_c_state
+        self.c_state = deepcopy(self.starting_c_state)
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
@@ -123,6 +124,15 @@ class CityReal(gym.Env):
         self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
         #print(self.i, self.It, self.city_time)
 
+    def is_action_feasible(self, action):
+        o, d = np.divmod(int(action), int(self.R))
+
+        if np.sum(self.c_state[o][: self.patience_time]) <= 0:
+            return False
+        else:
+            return True
+
+
     def step(self, action):
 
         reward = 0
@@ -162,11 +172,6 @@ class CityReal(gym.Env):
             self.step_time_update()
             if self.city_time == self.time_horizon:
                 self.terminate = True
-
-
-
-
-
 
         return output_state, action, reward, True
 

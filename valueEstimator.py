@@ -38,27 +38,25 @@ class valueEstimator(nn.Module):
         #process list
         procs = []
         print("Sampling Trajectories...")
-        for i in range(self.dataset_size):
-            p = Process(target=self.generateSamples, args=(policyNet,i))
-            procs.append(p)
-            p.start()
+        i = 0
+        #for i in range(self.dataset_size):
+        p = Process(target=self.generateSamples, args=(policyNet,i))
+        procs.append(p)
+        p.start()
         while 1:
             if not self.dataset_q.empty():
-                X_piece, y_piece, Action_piece, R_piece, Prob_piece = self. oneReplicateEstimation()
+                X_piece, y_piece, Action_piece, R_piece, Prob_piece = self.oneReplicateEstimation()
                 S = S + X_piece
                 V = V + y_piece
                 R =  R + R_piece
                 Action = Action + Action_piece
                 Prob = Prob + Prob_piece
                 processed_num += 1
-                print("process one piece done")
             if processed_num >= self.dataset_size and self.dataset_q.empty():
                 break
         print("while loop out")
-        print("q size", self.dataset_q.qsize())
         for p in procs:
             p.join()
-            print("Hello")
         print("Sampling is done")
         return S, V, Action, R, Prob
 
@@ -68,25 +66,37 @@ class valueEstimator(nn.Module):
         env = deepcopy(self.env)
         state = env.reset()
         state = torch.from_numpy(state.astype(np.float32))
-        init_action_distrib = policyNet(state)
-
-        init_action = torch.multinomial(init_action_distrib,1).item()
-        action = init_action
         while env.city_time < env.time_horizon:
-            feasible_act = False
             data_piece = []
-            while not feasible_act and env.city_time < env.time_horizon:
-                state_orig, old_action, reward, feasible_act = env.step(action)
+            action_distrib = policyNet(state)
+            action = torch.multinomial(action_distrib/torch.sum(action_distrib), 1).item()
+            action_prob = action_distrib[action]
+            state_orig, action, reward, feasible_act = env.step(action)
+            state = torch.from_numpy(state_orig.astype(np.float32))
+            print("env time", env.city_time)
+            print("feasible_act",feasible_act)
+            print("i", env.i)
+            print('\n')
+            if feasible_act == True:
+                data_piece.append(reward)
+                data_piece.append(state_orig)
+                data_piece.append(action)
+                data_piece.append(action_prob.item())
+                
+            else:
+                while not feasible_act and env.city_time < env.time_horizon:
+                    action_distrib[int(action)] = 0.0
+                    action = torch.multinomial(action_distrib/torch.sum(action_distrib), 1).item()
+                    action_prob = action_distrib[action]
+                    feasible_act = env.is_action_feasible(action)
+                state_orig, action, reward, feasible_act = env.step(action)
                 state = torch.from_numpy(state_orig.astype(np.float32))
-                action_distrib = policyNet(state)
-                action = torch.multinomial(action_distrib, 1).item()
-                action_prob = action_distrib[action]
-                if feasible_act == True:
-                    data_piece.append(reward)
-                    data_piece.append(state_orig)
-                    data_piece.append(action)
-                    data_piece.append(action_prob.item())
+                data_piece.append(reward)
+                data_piece.append(state_orig)
+                data_piece.append(action)
+                data_piece.append(action_prob.item())
             data_single_trial.append(data_piece)
+            
 
         self.dataset_q.put(data_single_trial)
 

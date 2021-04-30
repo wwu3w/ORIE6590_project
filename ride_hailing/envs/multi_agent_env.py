@@ -37,6 +37,7 @@ class CityReal_ma(gym.Env):
         self.num_neigbor = 6
         self.neighbor_list = np.zeros((self.R, self.num_neigbor)) - 1
         self.construct_map_neighbor()
+        self.num_request = 0
 
         # parameters
         self.arrival_rate = arrival_rate
@@ -51,23 +52,22 @@ class CityReal_ma(gym.Env):
         self.starting_c_state = np.asarray(c_state)
         self.c_state = self.starting_c_state  # car state R * tau_d
         self.p_state = np.zeros([self.L, self.R, self.R])  # passenger_state R * R
-        self.It = 0
-        self.i = 0
+        self.It = np.zeros(self.R)
+        self.i = np.zeros(self.R)
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
 
 
         # Action
         self.action_space = gym.spaces.Discrete(self.R + self.num_neigbor)
         space_dim = []
-        for _ in range(self.time_horizon): #one-hot for time
-            space_dim.append(int(1))
+        space_dim.append(int(self.time_horizon))
         for _ in range(self.R): #one-hot for grid
             space_dim.append(int(1))
         for _ in range(self.R * self.tau_d): #car_state
             space_dim.append(int(capacity))
         for _ in range(self.R): #local passenger_state
             space_dim.append(int(capacity))
-        for _ in range(self.R - 1): #global passenger_state
+        for _ in range(self.R): #global passenger_state
             space_dim.append(int(capacity))
         self.observation_space = gym.spaces.MultiDiscrete(space_dim)
 
@@ -100,12 +100,13 @@ class CityReal_ma(gym.Env):
         self.idx = 0
         self.total_reward = 0
         self.city_time = 0
+        self.num_request = 0
         self.c_state = self.starting_c_state
         self.p_state = np.zeros((self.L, self.R, self.R))
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum([self.c_state[_][0:self.patience_time] for _ in range(self.R)])
-        self.i = 0
+        self.It = np.sum(self.c_state[:, 0], 1)
+        self.i = np.zeros(self.R)
         self.terminate = False
         #return self.generate_state()
 
@@ -115,6 +116,7 @@ class CityReal_ma(gym.Env):
             self.p_state[ll] = self.p_state[ll + 1]
         self.p_state[self.L - 1] = np.zeros([self.R, self.R])
         self.generate_trip_request()
+        self.num_request += np.sum(self.p_state)
 
     def generate_trip_request(self):
         for idx in range(self.R):
@@ -148,10 +150,12 @@ class CityReal_ma(gym.Env):
         self.step_passenger_state_update()
         self.city_time += 1
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum(self.c_state[:, 0:self.patience_time], 1)
+        self.It = np.sum(self.c_state[:, 0], 1)
         #print(self.i, self.It, self.city_time)
 
     def step(self, action):
+
+
 
         reward = 0
 
@@ -184,22 +188,26 @@ class CityReal_ma(gym.Env):
 
         self.i[self.idx] += 1
 
-        output_state = self.generate_state()
+
         #print(self.i, self.It, self.city_time)
 
-        if self.i[self.idx] >= self.It[self.idx]:
+        while self.i[self.idx] >= self.It[self.idx] and self.idx < self.R:
             self.idx += 1
+
+
 
         while self.R <= self.idx  and self.city_time < self.time_horizon:
             self.step_time_update()
             if self.city_time == self.time_horizon:
                 self.terminate = True
+            while self.i[self.idx] >= self.It[self.idx] and self.idx < self.R:
+                self.idx += 1
+
+        next_state = self.generate_state()
+        next_grid = self.idx
 
 
 
-
-
-
-        return output_state, action, reward, True
+        return next_state, next_grid, action, reward, True
 
 

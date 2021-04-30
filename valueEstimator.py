@@ -1,6 +1,7 @@
 from torch import nn
 from ride_hailing.envs.utilities import *
-
+from multiprocessing import Process, Queue, Array
+from copy import deepcopy
 device = "cuda" if torch.cuda.is_available() else "cpu"
 class valueEstimator(nn.Module):
     def __init__(self, env):
@@ -21,58 +22,97 @@ class valueEstimator(nn.Module):
         self.dataset_size = 2
         self.dataset = []#it contains various car states
         self.scale = 10
+        self.dataset_q = Queue()
+
 
     def forward(self, x):
         return self.linear_relu_stack(x)
-    def generateSamples(self, policyNet):#generate data according to a policy net
-        print("Sampling data...")
+    def generateData(self, policyNet):
+        #Data lists
+        S = []
+        V = []
+        R = []
+        Action = []
+        Prob = []
+        processed_num = 0
+        #process list
+        procs = []
+        print("Sampling Trajectories...")
         for i in range(self.dataset_size):
-            print("iter: " + str(i+1) + "/" +str(self.dataset_size))
-            data_single_trial = []
-            state = self.env.reset()
-            state = torch.from_numpy(state.astype(np.float32))
-            init_action_distrib = policyNet(state)
+            p = Process(target=self.generateSamples, args=(policyNet,i))
+            procs.append(p)
+            p.start()
+        while 1:
+            if not self.dataset_q.empty():
+                X_piece, y_piece, Action_piece, R_piece, Prob_piece = self. oneReplicateEstimation()
+                S = S + X_piece
+                V = V + y_piece
+                R =  R + R_piece
+                Action = Action + Action_piece
+                Prob = Prob + Prob_piece
+                processed_num += 1
+                print("process one piece done")
+            if processed_num >= self.dataset_size and self.dataset_q.empty():
+                break
+        print("while loop out")
+        print("q size", self.dataset_q.qsize())
+        for p in procs:
+            p.join()
+            print("Hello")
+        print("Sampling is done")
+        return S, V, Action, R, Prob
 
-            init_action = torch.multinomial(init_action_distrib,1).item()
-            action = init_action
-            while self.env.city_time < self.env.time_horizon:
-                feasible_act = False
-                data_piece = []
-                while not feasible_act and self.env.city_time < self.env.time_horizon:
-                    state, old_action, reward, feasible_act = self.env.step(action)
-                    state = torch.from_numpy(state.astype(np.float32))
-                    action_distrib = policyNet(state)
-                    action = torch.multinomial(action_distrib, 1).item()
-                    action_prob = action_distrib[action]
-                    if feasible_act == True:
-                        data_piece.append(reward)
-                        data_piece.append(state)
-                        data_piece.append(action)
-                        data_piece.append(action_prob)
-                data_single_trial.append(data_piece)
-            self.dataset.append(data_single_trial)
-        print("Sampling data completed.")
+    def generateSamples(self, policyNet, i):#generate data according to a policy net
+        print("iter: " + str(i+1) + "/" +str(self.dataset_size))
+        data_single_trial = []
+        env = deepcopy(self.env)
+        state = env.reset()
+        state = torch.from_numpy(state.astype(np.float32))
+        init_action_distrib = policyNet(state)
+
+        init_action = torch.multinomial(init_action_distrib,1).item()
+        action = init_action
+        while env.city_time < env.time_horizon:
+            feasible_act = False
+            data_piece = []
+            while not feasible_act and env.city_time < env.time_horizon:
+                state_orig, old_action, reward, feasible_act = env.step(action)
+                state = torch.from_numpy(state_orig.astype(np.float32))
+                action_distrib = policyNet(state)
+                action = torch.multinomial(action_distrib, 1).item()
+                action_prob = action_distrib[action]
+                if feasible_act == True:
+                    data_piece.append(reward)
+                    data_piece.append(state_orig)
+                    data_piece.append(action)
+                    data_piece.append(action_prob.item())
+            data_single_trial.append(data_piece)
+
+        self.dataset_q.put(data_single_trial)
+
+
+
     def oneReplicateEstimation(self):
         S = []
         V = []
         R = []
         Action = []
         Prob = []
-        for trial in self.dataset:
-            v_sum = 0
-            for i in range(len(trial) - 1, -1, -1):
-                datapiece = trial[i]
-                r = datapiece[0]
-                s = datapiece[1].numpy()
-                a = datapiece[2]
-                a_prob = datapiece[3]
-                v_sum += r
-                S.append(s)
-                V.append(v_sum)
-                Action.append(a)
-                R.append(r)
-                Prob.append(a_prob)
-        self.dataset = []
+        trial = self.dataset_q.get()
+        print(self.dataset_q.qsize())
+        v_sum = 0
+        for i in range(len(trial) - 1, -1, -1):
+            datapiece = trial[i]
+            r = datapiece[0]
+            s = datapiece[1]
+            a = datapiece[2]
+            a_prob = datapiece[3]
+            v_sum += r
+            S.append(s)
+            V.append(v_sum)
+            Action.append(a)
+            R.append(r)
+            Prob.append(a_prob)
         return S, V, Action, R, Prob
 
 

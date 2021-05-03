@@ -19,7 +19,7 @@ class valueEstimator(nn.Module):
             nn.Linear(256, 1),
             nn.ReLU(),
         )#policy network
-        self.dataset_size = 4
+        self.dataset_size = 5
         self.dataset = []#it contains various car states
         self.scale = 10
         self.dataset_q = Queue()

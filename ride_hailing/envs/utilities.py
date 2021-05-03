@@ -144,11 +144,12 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefn
     print("Training policyNet...")
     X_batch, R_batch, Act_batch, Prob_batch = segmentPolicyTrainingData(X, R, Act, Prob, batch_size)
     size_batch = len(R_batch)
-    train_iter = 4
+    train_iter = 3
     for j in range(train_iter):
         loss_sum = 0
         for i in range(size_batch):
-            X_seg = torch.Tensor(X_batch[i])
+            X_seg = X_batch[i]
+            X_seg = torch.Tensor(X_seg)
             R_seg = R_batch[i]
             Act_seg = Act_batch[i]
             Prob_seg = Prob_batch[i]

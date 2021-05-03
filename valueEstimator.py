@@ -19,7 +19,7 @@ class valueEstimator(nn.Module):
             nn.Linear(256, 1),
             nn.ReLU(),
         )#policy network
-        self.dataset_size = 2
+        self.dataset_size = 4
         self.dataset = []#it contains various car states
         self.scale = 10
         self.dataset_q = Queue()
@@ -38,11 +38,10 @@ class valueEstimator(nn.Module):
         #process list
         procs = []
         print("Sampling Trajectories...")
-        i = 0
-        #for i in range(self.dataset_size):
-        p = Process(target=self.generateSamples, args=(policyNet,i))
-        procs.append(p)
-        p.start()
+        for i in range(self.dataset_size):
+            p = Process(target=self.generateSamples, args=(policyNet,i))
+            procs.append(p)
+            p.start()
         while 1:
             if not self.dataset_q.empty():
                 X_piece, y_piece, Action_piece, R_piece, Prob_piece = self.oneReplicateEstimation()
@@ -52,9 +51,11 @@ class valueEstimator(nn.Module):
                 Action = Action + Action_piece
                 Prob = Prob + Prob_piece
                 processed_num += 1
+                print("processed on data")
             if processed_num >= self.dataset_size and self.dataset_q.empty():
+                print("while loop out")
                 break
-        print("while loop out")
+
         for p in procs:
             p.join()
         print("Sampling is done")
@@ -73,10 +74,7 @@ class valueEstimator(nn.Module):
             action_prob = action_distrib[action]
             state_orig, action, reward, feasible_act = env.step(action)
             state = torch.from_numpy(state_orig.astype(np.float32))
-            print("env time", env.city_time)
-            print("feasible_act",feasible_act)
-            print("i", env.i)
-            print('\n')
+
             if feasible_act == True:
                 data_piece.append(reward)
                 data_piece.append(state_orig)
@@ -85,7 +83,7 @@ class valueEstimator(nn.Module):
                 
             else:
                 while not feasible_act and env.city_time < env.time_horizon:
-                    action_distrib[int(action)] = 0.0
+                    action_distrib[int(action)] = 1e-6
                     action = torch.multinomial(action_distrib/torch.sum(action_distrib), 1).item()
                     action_prob = action_distrib[action]
                     feasible_act = env.is_action_feasible(action)
@@ -95,9 +93,11 @@ class valueEstimator(nn.Module):
                 data_piece.append(state_orig)
                 data_piece.append(action)
                 data_piece.append(action_prob.item())
+           # if env.city_time%90 == 0 and env.i == 0:
+            #    print("env time", env.city_time)
+            #    print("feasible_act", feasible_act)
+            #    print("i", env.i)
             data_single_trial.append(data_piece)
-            
-
         self.dataset_q.put(data_single_trial)
 
 
@@ -109,7 +109,7 @@ class valueEstimator(nn.Module):
         Action = []
         Prob = []
         trial = self.dataset_q.get()
-        print(self.dataset_q.qsize())
+        #print(self.dataset_q.qsize())
         v_sum = 0
         for i in range(len(trial) - 1, -1, -1):
             datapiece = trial[i]

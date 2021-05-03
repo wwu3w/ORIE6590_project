@@ -87,10 +87,13 @@ if __name__== '__main__':
 		valuefnc.to("cpu")
 		policyNet.to("cpu")
 		X, y, Action, R, Prob = valuefnc.generateData(policyNet)
-		#X, y, Action, R, Prob = valuefnc.oneReplicateEstimation()#training data for value function
 		valuefnc.to(device)
 		policyNet.to(device)
 		trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
 		trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, optimizer_policy,  valuefnc)
+		valuefnc.to("cpu")
+		policyNet.to("cpu")
+		perform = policyNet.testPolicy()
+		print("Epoch#" + str(i) + " rate: ", perform)
 
 

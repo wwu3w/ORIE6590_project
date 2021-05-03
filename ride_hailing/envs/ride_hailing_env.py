@@ -170,7 +170,7 @@ class CityReal(gym.Env):
         self.i += 1
         #next_state = self.generate_state()
 
-        #print(self.i, self.It, self.city_time)
+       # print('before while',self.i, self.It, self.city_time)
         while self.It <= self.i and self.city_time < self.time_horizon:
             self.step_time_update()
             if self.city_time == self.time_horizon:

@@ -176,13 +176,10 @@ class CityReal(gym.Env):
             if self.city_time == self.time_horizon:
                 self.terminate = True
 
-<<<<<<< HEAD
-        return output_state, action, reward, True
-=======
         next_state = self.generate_state()
 
 
         return next_state, action, reward, True
->>>>>>> f091de59479e54ad00f8f26f19d66ac626f03758
+
 
 

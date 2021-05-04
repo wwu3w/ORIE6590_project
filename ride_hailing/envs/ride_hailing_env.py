@@ -90,10 +90,11 @@ class CityReal(gym.Env):
 
     def step_passenger_state_update(self):
         self.p_state = np.zeros([self.R, self.R])
-        self.generate_trip_request()
-        self.num_request += np.sum(self.p_state)
+        trip_added = self.generate_trip_request()
+        self.num_request += trip_added
 
     def generate_trip_request(self):
+        trip_added = 0
         for idx in range(self.R):
             lam = self.arrival_rate[self.city_time][idx]
             n_trip = np.random.poisson(lam, 1)[0]
@@ -104,6 +105,8 @@ class CityReal(gym.Env):
                 trip_dest = np.random.choice(self.R, n_trip, p = dest_prob)
                 for dest_idx in trip_dest:
                     self.p_state[idx][dest_idx] += 1
+                trip_added += n_trip
+        return trip_added
 
     def step_car_state_update(self):
         for idx in range(self.R):

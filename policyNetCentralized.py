@@ -32,7 +32,7 @@ class PolicyNet(nn.Module):
         vals = valuefnc(state_input) * valuefnc.scale
         action_prs = pred[torch.arange(datalength), Act]
         ratio = torch.div(action_prs, Prob)
-        tot_cost = torch.clamp(ratio[0:datalength-1], 1 - self.epsilon, 1 + self.epsilon) * (R[1:datalength] + torch.reshape(torch.transpose(vals[0:datalength-1] - vals[1:datalength], 0, 1), (datalength-1,)))
+        tot_cost = torch.minimum(torch.clamp(ratio[1:datalength], 1 - self.epsilon, 1 + self.epsilon),ratio[1:datalength])  * (R[1:datalength] + torch.reshape(torch.transpose(vals[0:datalength-1] - vals[1:datalength], 0, 1), (datalength-1,)))
         return -torch.sum(tot_cost/valuefnc.dataset_size)
     def testPolicy(self):
         env = deepcopy(self.env)
@@ -50,6 +50,8 @@ class PolicyNet(nn.Module):
                     feasible_act = env.is_action_feasible(action)
                 state_orig, action, reward, feasible_act = env.step(action)
                 state = torch.from_numpy(state_orig.astype(np.float32))
+            if env.city_time%100 == 0 and env.i == 0:
+                print("test envTime",env.city_time)
         return env.total_reward/env.num_request
 
 

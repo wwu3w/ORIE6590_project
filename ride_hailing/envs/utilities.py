@@ -135,8 +135,9 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
             loss = loss + l2_regularization
             loss.backward()
             optimizer.step()
-            loss_sum += loss.item()   
-        print(f"Value Estimation loss: {loss_sum/size_batch:>7f}")
+            loss_sum += loss.item()
+        if j%10 == 0:
+            print(f"Value Estimation loss: {loss_sum/size_batch:>7f}")
     print("ValueNet Training Completed.")
 
 def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefnc):
@@ -144,7 +145,7 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefn
     print("Training policyNet...")
     X_batch, R_batch, Act_batch, Prob_batch = segmentPolicyTrainingData(X, R, Act, Prob, batch_size)
     size_batch = len(R_batch)
-    train_iter = 3
+    train_iter = 5
     for j in range(train_iter):
         loss_sum = 0
         for i in range(size_batch):

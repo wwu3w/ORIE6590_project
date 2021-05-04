@@ -91,9 +91,5 @@ if __name__== '__main__':
 		policyNet.to(device)
 		trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
 		trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, optimizer_policy,  valuefnc)
-		valuefnc.to("cpu")
-		policyNet.to("cpu")
-		perform = policyNet.testPolicy()
-		print("Epoch#" + str(i) + " rate: ", perform)
 
 

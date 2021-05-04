@@ -50,7 +50,7 @@ class PolicyNet(nn.Module):
                     feasible_act = env.is_action_feasible(action)
                 state_orig, action, reward, feasible_act = env.step(action)
                 state = torch.from_numpy(state_orig.astype(np.float32))
-            if env.city_time%100 == 0 and env.i == 0:
+            if env.city_time%10 == 0 and env.i == 0:
                 print("test envTime",env.city_time)
         return env.total_reward/env.num_request
 

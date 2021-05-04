@@ -25,6 +25,7 @@ class valueEstimator(nn.Module):
         self.dataset_q = Queue()
 
 
+
     def forward(self, x):
         return self.linear_relu_stack(x)
     def generateData(self, policyNet):
@@ -51,7 +52,6 @@ class valueEstimator(nn.Module):
                 Action = Action + Action_piece
                 Prob = Prob + Prob_piece
                 processed_num += 1
-                print("processed on data")
             if processed_num >= self.dataset_size and self.dataset_q.empty():
                 print("while loop out")
                 break
@@ -93,11 +93,8 @@ class valueEstimator(nn.Module):
                 data_piece.append(state_orig)
                 data_piece.append(action)
                 data_piece.append(action_prob.item())
-           # if env.city_time%90 == 0 and env.i == 0:
-            #    print("env time", env.city_time)
-            #    print("feasible_act", feasible_act)
-            #    print("i", env.i)
             data_single_trial.append(data_piece)
+        print("rate: " + str(i) + " : ", env.tot_reward / env.num_request)
         self.dataset_q.put(data_single_trial)
 
 

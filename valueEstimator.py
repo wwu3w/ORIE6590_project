@@ -10,9 +10,7 @@ class valueEstimator(nn.Module):
         input_size = 1 + env.R * env.R + env.R * (env.tau_d + env.L) # time, passenger state, car state
         out_put_size = env.R * env.R
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, 4096),
-            nn.ReLU(),
-            nn.Linear(4096, 1024),
+            nn.Linear(input_size, 1024),
             nn.ReLU(),
             nn.Linear(1024, 256),
             nn.ReLU(),
@@ -95,7 +93,7 @@ class valueEstimator(nn.Module):
                 data_piece.append(action)
                 data_piece.append(action_prob.item())
             data_single_trial.append(data_piece)
-            if env.city_time%10 == 0 and env.i == 0:
+            if env.city_time%180 == 0 and env.i == 0:
                 print("test envTime",env.city_time, "It", env.It, "total_reward", env.total_reward, "num_request", env.num_request, "FalseCount", falseCount)
         print("rate: " + str(i) + " : ", env.total_reward / env.num_request)
         self.dataset_q.put(data_single_trial)

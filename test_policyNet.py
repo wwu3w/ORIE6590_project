@@ -77,13 +77,16 @@ if __name__== '__main__':
 	policyNet = PolicyNet(env)
 	valuefnc = valueEstimator(env)
 	epochs = 10
-	learning_rate = 0.0001
-	batch_size = 1024
+	learning_rate = 0.00035
+	learning_rate_policy = 0.00002
+	batch_size = 512
 	loss_fn = nn.MSELoss()#for value network training
 	optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
-	optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = 0.000002)
+	optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = learning_rate_policy)
+	scheduler = torch.optim.lr_scheduler.StepLR(optimizer_policy, step_size = 1,  gamma = 0.5)
 
-	for i in range(epochs):
+
+	for epoch in range(epochs):
 		valuefnc.to("cpu")
 		policyNet.to("cpu")
 		X, y, Action, R, Prob = valuefnc.generateData(policyNet)
@@ -91,5 +94,6 @@ if __name__== '__main__':
 		policyNet.to(device)
 		trainValueNet(X, y, batch_size, valuefnc, loss_fn, optimizer)
 		trainPolicyNet(X, R, Action, Prob, policyNet, batch_size, optimizer_policy,  valuefnc)
+		scheduler.step()
 
 

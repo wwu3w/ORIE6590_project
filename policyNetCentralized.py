@@ -10,17 +10,15 @@ class PolicyNet(nn.Module):
         input_size = 1 + env.R * env.R + env.R * (env.tau_d + env.L) # time, passenger state, car state
         out_put_size = env.R * env.R
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, 4096),
+            nn.Linear(input_size, 1024),
             nn.ReLU(),
-            nn.Linear(4096, 2048),
+            nn.Linear(1024, 256),
             nn.ReLU(),
-            nn.Linear(2048, 512),
-            nn.ReLU(),
-            nn.Linear(512, env.action_space.n),
+            nn.Linear(256, env.action_space.n),
             nn.Softmax(dim=0)
         )#policy network
         self.output_size = env.action_space.n
-        self.epsilon = 0.999
+        self.epsilon = 0.9999
 
 
     def forward(self, x):

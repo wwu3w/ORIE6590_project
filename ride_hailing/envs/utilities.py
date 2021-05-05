@@ -114,7 +114,7 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
     print("Training valueNet...")
     X_batch, y_batch = segmentTrainingData(X, y, batch_size)
     size_batch = len(y_batch)
-    train_iter = 15
+    train_iter = 8
     for j in range(train_iter):
         loss_sum = 0
         weight_sum = 0

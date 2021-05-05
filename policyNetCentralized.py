@@ -20,7 +20,7 @@ class PolicyNet(nn.Module):
             nn.Softmax(dim=0)
         )#policy network
         self.output_size = env.action_space.n
-        self.epsilon = 0.9
+        self.epsilon = 0.999
 
 
     def forward(self, x):
@@ -32,27 +32,11 @@ class PolicyNet(nn.Module):
         vals = valuefnc(state_input) * valuefnc.scale
         action_prs = pred[torch.arange(datalength), Act]
         ratio = torch.div(action_prs, Prob)
+        #print("ratio: ", torch.minimum(torch.clamp(ratio[1:datalength], 1 - self.epsilon, 1 + self.epsilon),ratio[1:datalength]))
+        #print("adv: ", (R[1:datalength] + torch.reshape(torch.transpose(vals[0:datalength-1] - vals[1:datalength], 0, 1), (datalength-1,))))
         tot_cost = torch.minimum(torch.clamp(ratio[1:datalength], 1 - self.epsilon, 1 + self.epsilon),ratio[1:datalength])  * (R[1:datalength] + torch.reshape(torch.transpose(vals[0:datalength-1] - vals[1:datalength], 0, 1), (datalength-1,)))
         return -torch.sum(tot_cost/valuefnc.dataset_size)
-    def testPolicy(self):
-        env = deepcopy(self.env)
-        state = env.reset()
-        state = torch.from_numpy(state.astype(np.float32))
-        while env.city_time < env.time_horizon:
-            action_distrib = self.forward(state)
-            action = torch.multinomial(action_distrib / torch.sum(action_distrib), 1).item()
-            state_orig, action, reward, feasible_act = env.step(action)
-            state = torch.from_numpy(state_orig.astype(np.float32))
-            if feasible_act == False:
-                while not feasible_act and env.city_time < env.time_horizon:
-                    action_distrib[int(action)] = 1e-6
-                    action = torch.multinomial(action_distrib / torch.sum(action_distrib), 1).item()
-                    feasible_act = env.is_action_feasible(action)
-                state_orig, action, reward, feasible_act = env.step(action)
-                state = torch.from_numpy(state_orig.astype(np.float32))
-            if env.city_time%10 == 0 and env.i == 0:
-                print("test envTime",env.city_time)
-        return env.total_reward/env.num_request
+
 
 
 

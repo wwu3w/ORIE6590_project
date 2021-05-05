@@ -78,10 +78,10 @@ if __name__== '__main__':
 	valuefnc = valueEstimator(env)
 	epochs = 10
 	learning_rate = 0.0001
-	batch_size = 2048
+	batch_size = 1024
 	loss_fn = nn.MSELoss()#for value network training
 	optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
-	optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = 0.0001)
+	optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = 0.000002)
 
 	for i in range(epochs):
 		valuefnc.to("cpu")

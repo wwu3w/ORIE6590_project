@@ -74,7 +74,7 @@ class valueEstimator(nn.Module):
             action_prob = action_distrib[action]
             state_orig, action, reward, feasible_act = env.step(action)
             state = torch.from_numpy(state_orig.astype(np.float32))
-
+            falseCount = 0
             if feasible_act == True:
                 data_piece.append(reward)
                 data_piece.append(state_orig)
@@ -87,6 +87,7 @@ class valueEstimator(nn.Module):
                     action = torch.multinomial(action_distrib/torch.sum(action_distrib), 1).item()
                     action_prob = action_distrib[action]
                     feasible_act = env.is_action_feasible(action)
+                    falseCount += 1
                 state_orig, action, reward, feasible_act = env.step(action)
                 state = torch.from_numpy(state_orig.astype(np.float32))
                 data_piece.append(reward)
@@ -94,7 +95,9 @@ class valueEstimator(nn.Module):
                 data_piece.append(action)
                 data_piece.append(action_prob.item())
             data_single_trial.append(data_piece)
-        print("rate: " + str(i) + " : ", env.tot_reward / env.num_request)
+            if env.city_time%10 == 0 and env.i == 0:
+                print("test envTime",env.city_time, "It", env.It, "total_reward", env.total_reward, "num_request", env.num_request, "FalseCount", falseCount)
+        print("rate: " + str(i) + " : ", env.total_reward / env.num_request)
         self.dataset_q.put(data_single_trial)
 
 

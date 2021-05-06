@@ -30,6 +30,7 @@ class RolloutBuffer:
         for reward in reversed(self.curr_rewards):
             total_reward = reward + gamma * total_reward
             self.curr_value_target.insert(0, total_reward)
+
         self.total_rewards.append(total_reward)
 
         #self.actions = np.concatenate((self.actions, self.curr_actions))
@@ -39,7 +40,6 @@ class RolloutBuffer:
         #self.logprobs = np.concatenate((self.logprobs, self.curr_logprobs))
         #self.time = np.concatenate((self.time, self.curr_time))
         self.value_targets = np.concatenate((self.value_targets, self.curr_value_target))
-
         self.curr_rewards = []
         self.curr_value_target = []
 

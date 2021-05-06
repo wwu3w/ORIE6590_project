@@ -4,17 +4,17 @@ import torch.optim as optim
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 class PPO:
-    def __init__(self, gamma, K_epochs, buffer, model, eps_clip):
+    def __init__(self, gamma, K_epochs, buffer, model, eps_clip, device):
 
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
         self.buffer = buffer
 
-        self.policy = model
+        self.policy = model.to(device)
 
 
-        self.policy_old = model
+        self.policy_old = model.to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         self.MSELoss = nn.MSELoss()
@@ -33,7 +33,7 @@ class PPO:
         sampler = BatchSampler(SubsetRandomSampler(range(batch_size)),mini_batch_size,drop_last=True)
         return sampler
 
-    def update(self, mini_batch_size, lr_actor, lr_critic, eps_clip):
+    def update(self, mini_batch_size, lr_actor, lr_critic, eps_clip, device):
         self.eps_clip = eps_clip
         self.optimizer = optim.Adam([
             {'params': self.policy.actor.parameters(), 'lr': lr_actor},
@@ -42,12 +42,12 @@ class PPO:
 
         #sampler = self.batchsample(mini_batch_size)
         # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach()  # .to(device)
-        old_next_states = torch.squeeze(torch.stack(self.buffer.next_states, dim=0)).detach()  # .to(device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach()  # .to(device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach()  # .to(device)
-        value_targets = torch.FloatTensor(self.buffer.value_targets)
-        rewards = torch.FloatTensor(self.buffer.rewards)
+        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
+        old_next_states = torch.squeeze(torch.stack(self.buffer.next_states, dim=0)).detach().to(device)
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
+        value_targets = torch.FloatTensor(self.buffer.value_targets).to(device)
+        rewards = torch.FloatTensor(self.buffer.rewards).to(device)
 
 
         # Optimize policy for K epochs
@@ -59,18 +59,20 @@ class PPO:
 
                 # Evaluating old actions and values
             logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-            next_state_values = self.policy.critic(old_next_states)
+            dist_entropy.to(device)
+            next_state_values = self.policy.critic(old_next_states).to(device)
 
                 # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
-            next_state_values = torch.squeeze(next_state_values)
+            state_values = torch.squeeze(state_values).to(device)
+            next_state_values = torch.squeeze(next_state_values).to(device)
 
                 # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
+            ratios = torch.exp(logprobs - old_logprobs.detach()).to(device)
 
                 # Finding Surrogate Loss
             advantages = rewards + next_state_values.detach() - state_values.detach()
-            advantages = (advantages - advantages.mean())/(advantages.std() + 1e-7)
+            advantages = (advantages - advantages.mean())/(advantages.std() + 1e-7).to(device)
+            advantages.to(device)
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
 

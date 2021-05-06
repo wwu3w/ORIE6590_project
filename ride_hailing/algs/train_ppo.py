@@ -92,12 +92,16 @@ random_seed = 0  # set random seed if required (0 = no random seed)
 
 #####################################################
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using {} device".format(device))
+
+
 state_dim = env.observation_space.shape[0]
 print(state_dim)
 act_dim = env.action_space.n
 model = ActorCritic(state_dim, act_dim)
 buffer = RolloutBuffer()
-agent = PPO(gamma, K_epochs, buffer, model, eps_clip)
+agent = PPO(gamma, K_epochs, buffer, model, eps_clip, device)
 
 start_time = datetime.now().replace(microsecond=0)
 print("Started training at (GMT) : ", start_time)
@@ -142,7 +146,7 @@ while time_step <= max_training_timesteps:
     lr_c = max(1 - time_step/max_training_timesteps, 0.01) * lr_critic
     lr_a = max(1 - time_step/max_training_timesteps, 0.01) * lr_actor
     eps = max((1 - time_step/max_training_timesteps) * eps_clip, 0.01)
-    agent.update(64, lr_a, lr_c, eps)
+    agent.update(64, lr_a, lr_c, eps, device)
 
 
 

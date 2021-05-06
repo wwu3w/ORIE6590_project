@@ -19,12 +19,12 @@ class PPO:
 
         self.MSELoss = nn.MSELoss()
 
-    def select_action(self, state):
+    def select_action(self, state, mask):
 
         with torch.no_grad():
             state = torch.FloatTensor(state)#.to(device)
             #print(state.shape[0])
-            action, action_logprob = self.policy_old.act(state)
+            action, action_logprob = self.policy_old.act(state, mask)
 
         return action.item(), state, action, action_logprob
 

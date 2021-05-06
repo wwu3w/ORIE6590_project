@@ -105,16 +105,13 @@ class CityReal_ma(gym.Env):
         self.p_state = np.zeros((self.L, self.R, self.R))
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum(self.c_state[:, 0], 1)
+        self.It = np.sum(self.c_state[:, 0:self.patience_time], 1)
         self.i = np.zeros(self.R)
         self.terminate = False
         #return self.generate_state()
 
-
     def step_passenger_state_update(self):
-        for ll in range(self.L - 1):
-            self.p_state[ll] = self.p_state[ll + 1]
-        self.p_state[self.L - 1] = np.zeros([self.R, self.R])
+        self.p_state = np.zeros([self.R, self.R])
         self.generate_trip_request()
         self.num_request += np.sum(self.p_state)
 
@@ -128,7 +125,7 @@ class CityReal_ma(gym.Env):
                 #print(dest_prob.shape())
                 trip_dest = np.random.choice(self.R, n_trip, p = dest_prob)
                 for dest_idx in trip_dest:
-                    self.p_state[self.L - 1, idx, dest_idx] += 1
+                    self.p_state[idx][dest_idx] += 1
 
     def step_car_state_update(self):
         for idx in range(self.R):
@@ -150,8 +147,16 @@ class CityReal_ma(gym.Env):
         self.step_passenger_state_update()
         self.city_time += 1
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
-        self.It = np.sum(self.c_state[:, 0], 1)
+        self.It = np.sum(self.c_state[:, 0:self.patience_time], 1)
         #print(self.i, self.It, self.city_time)
+
+    def generate_final_state(self):
+        state_dim = self.observation_space.shape[0]
+        final_state = np.zeros(self.R, state_dim)
+        for idx in range(self.R):
+            self.idx = idx
+            final_state[idx] = self.generate_state()
+        return final_state
 
     def step(self, action):
 
@@ -162,13 +167,18 @@ class CityReal_ma(gym.Env):
         #action = np.random.choice(range(self.R * self.R), 1, policy)[0]
         if action < self.R:
             dest_idx = int(action)
-            if np.sum(self.p_state[:, self.idx, dest_idx]) <= 0:
+            if np.sum(self.p_state[:, self.idx, dest_idx]) <= 0 \
+                    and np.sum(self.c_state[self.idx, 0:self.patience_time]) <=0 :
                 return [], action, reward, False
 
         else:
             dest_idx = self.neighbor_list[int(action - self.R)]
             if dest_idx < 0:
                 return [], action, reward, False
+
+        for tt1 in range(self.L + 1):
+            if self.c_state[o][tt1] > 0:
+                break
 
         tt = self.travel_time[self.city_time, self.idx, dest_idx]
 

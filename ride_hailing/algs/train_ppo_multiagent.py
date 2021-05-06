@@ -47,9 +47,8 @@ tau_d = np.max(tau1)
 c_state = np.zeros((R, tau_d + L))
 tot_unassigned = N
 num_empty_cell = R*tau_d
-init_dist = lambda1 / np.sum(lambda1)
 for i in range(R):
-	c_state[i,0] = int(N*init_dist[i])
+	c_state[i,0] = N/R
 #print(c_state)
 travel_time = np.zeros((H,R,R))
 trip_dest_prob = np.zeros((H,R,R))
@@ -120,18 +119,20 @@ while time_step <= max_training_timesteps:
     performance = []
 
     for _ in range(num_simulation):
-        state, mask = env.reset()
+        state, grid_id = env.reset()
         # Loop for a whole time horizon of the ride-hailing system
         while not env.terminate:
-            #feasible_act = False
-            #while not feasible_act and not env.terminate:
-            # select action with policy
-            action, state_buffer, action_buffer, logprob_buffer = agent.select_action(state, mask)
-            state, action, reward, mask, feasible_act = env.step(action)
 
-            agent.buffer.save(action_buffer, state_buffer, logprob_buffer, reward, env.city_time, torch.FloatTensor(state))
-        agent.buffer.update(gamma)
+            # select action with policy
+            action, state_buffer, action_buffer, logprob_buffer = agent.select_action(state)
+            state, action, reward, feasible_act, next_grid_id, _ = env.step(action, grid_id)
+
+            agent.buffer.save(grid_id, action_buffer, state_buffer, logprob_buffer, reward, env.city_time)
+			grid_id = next_grid_id
+		final_state = env.generate_final_state()
+        agent.buffer.update(gamma, final_state)
         performance.append(env.total_reward/env.num_request)
+
 
 
     time_step += 1

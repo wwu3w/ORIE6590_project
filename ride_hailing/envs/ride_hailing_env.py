@@ -42,7 +42,7 @@ class CityReal(gym.Env):
         # States
         self.city_time = 0
         self.starting_c_state = np.asarray(c_state)
-        self.c_state = deepcopy(self.starting_c_state)  # car state R * tau_d
+        self.c_state = self.starting_c_state  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
         self.It = 0
         self.i = 0
@@ -62,11 +62,12 @@ class CityReal(gym.Env):
             space_dim.append(int(capacity))
         self.observation_space = gym.spaces.MultiDiscrete(space_dim)
 
+        self.action_mask = np.ones(self.R ** 2)
+
 
 
     def generate_state(self):
-        #state_time = np.zeros(self.time_horizon)
-        state_time = self.city_time
+        state_time = np.array([self.city_time])
         state_c = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
         state_p = np.reshape(np.array(self.p_state), self.R ** 2)
         state = np.concatenate((state_time, state_c, state_p), axis=None)
@@ -79,13 +80,15 @@ class CityReal(gym.Env):
         self.total_reward = 0
         self.num_request = 0
         self.city_time = 0
-        self.c_state = deepcopy(self.starting_c_state)
+        self.c_state = self.starting_c_state
         self.step_passenger_state_update()
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum(self.c_state[: ,0:self.patience_time])
         self.i = 0
         self.terminate = False
-        return self.generate_state()
+        self.action_mask = np.ones(self.R ** 2)
+        self.update_action_mask()
+        return self.generate_state(), self.action_mask
 
 
     def step_passenger_state_update(self):
@@ -125,16 +128,15 @@ class CityReal(gym.Env):
         self.city_time += 1
         self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
         self.It = np.sum(self.c_state[:,0:self.patience_time])
+        self.action_mask = np.ones(self.R ** 2)
         #print(self.i, self.It, self.city_time)
 
-    def is_action_feasible(self, action):
-        o, d = np.divmod(int(action), int(self.R))
-
-        if np.sum(self.c_state[o][: self.patience_time]) <= 0:
-            return False
-        else:
-            return True
-
+    def update_action_mask(self):
+        grid_indices = np.where(np.sum(self.c_state[:, 0:self.patience_time], 1) <=0)[0]
+        action_indices = []
+        for idx in grid_indices:
+            action_indices += range(idx * self.R, idx * self.R + self.R)
+        self.action_mask[action_indices] = 0
 
     def step(self, action):
 
@@ -176,13 +178,10 @@ class CityReal(gym.Env):
             if self.city_time == self.time_horizon:
                 self.terminate = True
 
-<<<<<<< HEAD
-        return output_state, action, reward, True
-=======
         next_state = self.generate_state()
+        self.update_action_mask()
 
 
-        return next_state, action, reward, True
->>>>>>> f091de59479e54ad00f8f26f19d66ac626f03758
+        return next_state, action, reward, self.action_mask, True
 
 

@@ -29,9 +29,10 @@ class ActorCritic(nn.Module):
     def forward(self):
         raise NotImplementedError
 
-    def act(self, state):
+    def act(self, state, mask):
 
-        action_probs = self.actor(state)
+        action_probs = self.actor(state) * mask
+        action_probs = action_probs / sum(action_probs)
         dist = Categorical(action_probs)
 
         action = dist.sample()

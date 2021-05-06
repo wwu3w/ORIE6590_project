@@ -114,7 +114,7 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
     print("Training valueNet...")
     X_batch, y_batch = segmentTrainingData(X, y, batch_size)
     size_batch = len(y_batch)
-    train_iter = 2
+    train_iter = 8
     for j in range(train_iter):
         loss_sum = 0
         weight_sum = 0
@@ -135,10 +135,9 @@ def trainValueNet(X, y, batch_size, model, loss_fn, optimizer):
             loss = loss + l2_regularization
             loss.backward()
             optimizer.step()
-            loss_sum += loss.item()   
+            loss_sum += loss.item()
         print(f"Value Estimation loss: {loss_sum/size_batch:>7f}")
     print("ValueNet Training Completed.")
-    print("\n")
 
 def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefnc):
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -149,7 +148,8 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefn
     for j in range(train_iter):
         loss_sum = 0
         for i in range(size_batch):
-            X_seg = torch.Tensor(X_batch[i])
+            X_seg = X_batch[i]
+            X_seg = torch.Tensor(X_seg)
             R_seg = R_batch[i]
             Act_seg = Act_batch[i]
             Prob_seg = Prob_batch[i]
@@ -166,6 +166,7 @@ def trainPolicyNet(X, R, Act, Prob, policymodel, batch_size, optimizer,  valuefn
             optimizer.step()
             loss_sum += loss.item()
         print(f"PolicyTrain Objective: {-loss_sum / size_batch:>7f}")
+    print("policyNet Training Completed.")
 
 
 

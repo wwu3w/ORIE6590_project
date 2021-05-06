@@ -42,7 +42,7 @@ class CityReal(gym.Env):
         # States
         self.city_time = 0
         self.starting_c_state = np.asarray(c_state)
-        self.c_state = self.starting_c_state  # car state R * tau_d
+        self.c_state = deepcopy(self.starting_c_state)  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
         self.It = 0
         self.i = 0

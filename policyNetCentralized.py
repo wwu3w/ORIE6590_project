@@ -1,26 +1,24 @@
 import torch
 from torch import nn
-import gym
-
+from copy import deepcopy
+import numpy as np
 device = "cuda" if torch.cuda.is_available() else "cpu"
 class PolicyNet(nn.Module):
     def __init__(self, env):
         super(PolicyNet, self).__init__()
-        self.env = env
+        self.env = deepcopy(env)
         input_size = 1 + env.R * env.R + env.R * (env.tau_d + env.L) # time, passenger state, car state
         out_put_size = env.R * env.R
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, 4096),
+            nn.Linear(input_size, 1024),
             nn.ReLU(),
-            nn.Linear(4096, 2048),
+            nn.Linear(1024, 256),
             nn.ReLU(),
-            nn.Linear(2048, 512),
-            nn.ReLU(),
-            nn.Linear(512, env.action_space.n),
+            nn.Linear(256, env.action_space.n),
             nn.Softmax(dim=0)
         )#policy network
         self.output_size = env.action_space.n
-        self.epsilon = 0.9
+        self.epsilon = 0.9999
 
 
     def forward(self, x):
@@ -32,8 +30,14 @@ class PolicyNet(nn.Module):
         vals = valuefnc(state_input) * valuefnc.scale
         action_prs = pred[torch.arange(datalength), Act]
         ratio = torch.div(action_prs, Prob)
-        tot_cost = torch.clamp(ratio[0:datalength-1], 1 - self.epsilon, 1 + self.epsilon) * (R[0:datalength-1] + torch.reshape(torch.transpose(vals[1:datalength] - vals[0:datalength-1], 0, 1), (datalength-1,)))
+        #print("ratio: ", torch.minimum(torch.clamp(ratio[1:datalength], 1 - self.epsilon, 1 + self.epsilon),ratio[1:datalength]))
+        #print("adv: ", (R[1:datalength] + torch.reshape(torch.transpose(vals[0:datalength-1] - vals[1:datalength], 0, 1), (datalength-1,))))
+        tot_cost = torch.minimum(torch.clamp(ratio[1:datalength], 1 - self.epsilon, 1 + self.epsilon),ratio[1:datalength])  * (R[1:datalength] + torch.reshape(torch.transpose(vals[0:datalength-1] - vals[1:datalength], 0, 1), (datalength-1,)))
         return -torch.sum(tot_cost/valuefnc.dataset_size)
+
+
+
+
 
 
 

@@ -12,10 +12,10 @@ def evaluate(model, env, numiters):
             while not feasible_act and env.city_time < env.time_horizon:
                 action = model(state, env)
                 state, action, reward, _, feasible_act = env.step(action)
-        #print(i, numiters)
+        print(env.total_reward, env.num_request)
         r.append(env.total_reward/env.num_request)
         #r_square += env.total_reward ** 2
 
     #mean_reward = r/numiters
     #sd_reward = np.sqrt(r_square/numiters - mean_reward ** 2)
-    return np.array(r).mean()
+    return r

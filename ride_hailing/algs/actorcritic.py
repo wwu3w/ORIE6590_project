@@ -32,7 +32,9 @@ class ActorCritic(nn.Module):
     def act(self, state, mask):
 
         action_probs = self.actor(state) * mask
+        #print(mask)
         action_probs = action_probs / sum(action_probs)
+        #print(action_probs)
         dist = Categorical(action_probs)
 
         action = dist.sample()

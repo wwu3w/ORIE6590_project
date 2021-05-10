@@ -75,7 +75,7 @@ state = env.reset()
 def model(state, env):
     return env.action_space.sample()
 
-numiters = 10  #iteration number
+numiters = 5  #iteration number
 r= evaluate(model, env, numiters)
 #print(np.mean(r) )
 #print(np.sqrt(np.square(r).mean() - np.mean(r) ** 2))

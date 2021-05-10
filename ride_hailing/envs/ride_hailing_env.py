@@ -119,7 +119,7 @@ class CityReal(gym.Env):
 
     def step_change_dest(self, dest1, dest2, tt1, tt2):
         self.c_state[dest1][tt1] -= 1
-        self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d-1)] += 1
+        self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d+self.L-1)] += 1
 
     def step_time_update(self):
         self.i = 0
@@ -149,7 +149,7 @@ class CityReal(gym.Env):
         #ensure there exists available cars
 
         if np.sum(self.c_state[o,: self.patience_time]) <= 0:
-            return self.generate_state(), action, reward, False
+            return self.generate_state(), action, reward, [], False
 
         for tt1 in range(self.L + 1):
             if self.c_state[o][tt1] > 0:
@@ -163,10 +163,11 @@ class CityReal(gym.Env):
             self.p_state[o][d] -= 1
         else:
             reward = 0
-            if o == d:
+            if o == d or self.c_state[o,0] <=0 :
                 tt2 = 0
 
         self.step_change_dest(o, d, tt1, tt2)
+        #print(self.city_time, reward, o, d)
         self.total_reward += reward
 
         self.i += 1
@@ -175,6 +176,7 @@ class CityReal(gym.Env):
         #print(self.i, self.It, self.city_time)
         while self.It <= self.i and self.city_time < self.time_horizon:
             self.step_time_update()
+            #print(self.p_state)
             if self.city_time == self.time_horizon:
                 self.terminate = True
 

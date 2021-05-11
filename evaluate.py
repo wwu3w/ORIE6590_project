@@ -7,9 +7,9 @@ def evaluate(model, env, numiters):
     for i in range(numiters):
         state, _ = env.reset()
         # Loop for a whole time horizon of the ride-hailing system
-        while env.city_time < env.time_horizon:
+        while not env.terminate:
             feasible_act = False
-            while not feasible_act and env.city_time < env.time_horizon:
+            while not feasible_act and not env.terminate:
                 action = model(state, env)
                 state, action, reward, _, feasible_act = env.step(action)
         print(env.total_reward, env.num_request)

@@ -77,11 +77,12 @@ env.reset()
 
 ################ PPO hyperparameters ################
 
-max_training_timesteps = 70  # break training loop if timeteps > max_training_timesteps
+max_training_timesteps = 75  # break training loop if timeteps > max_training_timesteps
 
 num_simulation = 5
-K_epochs = 50  # update policy for K epochs in one PPO update
-
+K_epochs_value = 10  # update policy for K epochs in one PPO update
+K_epochs_policy = 3
+policy_early_stop = 0.012
 eps_clip = 0.2  # clip parameter for PPO
 gamma = 1  # discount factor
 
@@ -99,9 +100,10 @@ print("Using {} device".format(device))
 state_dim = env.observation_space.shape[0]
 print(state_dim)
 act_dim = env.action_space.n
-model = ActorCritic(state_dim, act_dim)
+Actor = Actor(state_dim, act_dim)
+Critic = Critic(state_dim)
 buffer = RolloutBuffer()
-agent = PPO(gamma, K_epochs, buffer, model, eps_clip, device)
+agent = PPO(gamma, K_epochs_policy, K_epochs_value, buffer, Actor, Critic, eps_clip, policy_early_stop, device)
 
 start_time = datetime.now().replace(microsecond=0)
 print("Started training at (GMT) : ", start_time)

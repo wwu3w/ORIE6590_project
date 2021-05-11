@@ -29,7 +29,6 @@ class CityReal(gym.Env):
         self.total_reward = 0
         self.terminate = False
         self.num_request = 0
-        self.car_assignment = []
 
         # parameters
         self.arrival_rate = arrival_rate
@@ -44,9 +43,10 @@ class CityReal(gym.Env):
         self.starting_c_state = np.asarray(c_state)
         self.c_state = deepcopy(self.starting_c_state)  # car state R * tau_d
         self.p_state = np.zeros([R, R])  # passenger_state R * R
+        self.l_state = np.zeros([R, L])
         self.It = 0
         self.i = 0
-        self.patience_time = min(self.L + 1, self.time_horizon - self.city_time)
+        self.patience_time = min(self.L, self.time_horizon - self.city_time)
 
 
         # Action dimension and State dimension
@@ -60,6 +60,8 @@ class CityReal(gym.Env):
             space_dim.append(int(capacity))
         for _ in range(self.R * self.R): #passenger_state
             space_dim.append(int(capacity))
+        for _ in range(self.R * self.L):
+            space_dim.append(int(capacity))
         self.observation_space = gym.spaces.MultiDiscrete(space_dim)
 
         self.action_mask = np.ones(self.R ** 2)
@@ -70,7 +72,8 @@ class CityReal(gym.Env):
         state_time = np.array([self.city_time])
         state_c = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
         state_p = np.reshape(np.array(self.p_state), self.R ** 2)
-        state = np.concatenate((state_time, state_c, state_p), axis=None)
+        state_l = np.reshape(np.array(self.l_state), self.R * self.L)
+        state = np.concatenate((state_time, state_c, state_p, state_l), axis=None)
 
         return state
 
@@ -80,7 +83,8 @@ class CityReal(gym.Env):
         self.total_reward = 0
         self.num_request = 0
         self.city_time = 0
-        self.c_state = deepcopy(self.starting_c_state) 
+        self.c_state = deepcopy(self.starting_c_state)
+        self.l_state = np.zeros([self.R, self.L])
         self.step_passenger_state_update()
         self.patience_time = min(self.L, self.time_horizon - self.city_time)
         self.It = np.sum(self.c_state[: ,0:self.patience_time])
@@ -88,7 +92,7 @@ class CityReal(gym.Env):
         self.terminate = False
         self.action_mask = np.ones(self.R ** 2)
         self.update_action_mask()
-        self.car_assignment = []
+        #self.car_assignment = []
         #print(self.starting_c_state)
         return self.generate_state(), self.action_mask
 
@@ -111,10 +115,6 @@ class CityReal(gym.Env):
                     self.p_state[idx][dest_idx] += 1
 
     def step_car_state_update(self):
-        while self.car_assignment:
-            o, d, tt1, tt2 = self.car_assignment.pop()
-            self.c_state[int(d), min(int(tt1 + tt2), self.tau_d + self.L - 1)] += 1
-        self.car_assignment = []
         for idx in range(self.R):
             for t in range(1, self.tau_d):
                 n_car = self.c_state[idx, t]
@@ -124,14 +124,19 @@ class CityReal(gym.Env):
                 self.c_state[idx, t] = 0
 
     def step_change_dest(self, dest1, dest2, tt1, tt2):
-        self.c_state[dest1][tt1] -= 1
-        self.car_assignment.append([dest1, dest2, tt1, tt2])
-        #self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d+self.L-1)] += 1
+        if tt2 > 0:
+            self.c_state[dest1, tt1] -= 1
+            self.c_state[int(dest2)][min(int(tt1 + tt2), self.tau_d+self.L-1)] += 1
+        else:
+            self.l_state[dest1, tt1] += 1
+        #self.car_assignment.append([dest1, dest2, tt1, tt2])
+
 
     def step_time_update(self):
         self.i = 0
         self.step_car_state_update()
         self.step_passenger_state_update()
+        self.l_state = np.zeros([self.R, self.L])
         self.city_time += 1
         self.patience_time = min(self.L, self.time_horizon - self.city_time)
         self.It = np.sum(self.c_state[:,0:self.patience_time])
@@ -141,7 +146,9 @@ class CityReal(gym.Env):
 
     def update_action_mask(self):
         self.action_mask = np.ones(self.R ** 2)
-        grid_indices = np.where(np.sum(self.c_state[:, 0:self.patience_time], 1) <=0)[0]
+        grid_indices = np.where(
+            np.sum(self.c_state[:, 0:self.patience_time] - self.l_state[:, 0: self.patience_time], 1)
+            <=0)[0]
         action_indices = []
         for idx in grid_indices:
             action_indices += range(idx * self.R, idx * self.R + self.R)
@@ -158,35 +165,41 @@ class CityReal(gym.Env):
         #ensure there exists available cars
         #assert np.sum(self.c_state[o,: self.patience_time]) > 0
 
-        if np.sum(self.c_state[o, 0: self.patience_time]) <= 0:
+        if np.sum(self.c_state[o, 0: self.patience_time] - self.l_state[o, 0: self.patience_time]) <= 0:
+
+
             return self.generate_state(), action, reward, [], False
 
         for tt1 in range(self.patience_time):
-            if self.c_state[o,tt1] > 0:
+            if self.c_state[o,tt1] - self.l_state[o,tt1] > 0:
+                #print(tt1, self.c_state[o,0: self.patience_time] , self.l_state[o,0: self.patience_time])
                 break
+
 
         tt2 = self.travel_time[self.city_time + tt1,o,d]
 
 
-        if self.p_state[o][d] > 0:
+        if self.p_state[o, d] > 0:
             reward = 1
-            self.p_state[o][d] -= 1
+            self.p_state[o, d] -= 1
         else:
             reward = 0
             if o == d or tt1 > 0 :
                 tt2 = 0
 
         self.step_change_dest(o, d, tt1, tt2)
+        #print(reward, self.p_state[o, d], self.c_state[o,0: self.patience_time] , self.l_state[o,0: self.patience_time])
         #print(self.city_time, reward, o, d)
         self.total_reward += reward
 
         self.i += 1
         #next_state = self.generate_state()
 
-        #print(np.sum(self.c_state[o,: self.patience_time]))
-        while np.sum(self.c_state[:, 0: self.patience_time]) <= 0 and not self.terminate:
-            #print(self.c_state[:,: self.patience_time])
+        time_update = np.sum(self.c_state[:, 0: self.patience_time] - self.l_state[:, 0: self.patience_time])
+        while time_update <= 0 and not self.terminate:
+
             self.step_time_update()
+            time_update = np.sum(self.c_state[:, 0: self.patience_time] - self.l_state[:, 0: self.patience_time])
             #print(self.p_state)
             if self.city_time == self.time_horizon:
                 #print(self.starting_c_state)

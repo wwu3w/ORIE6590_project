@@ -2,6 +2,7 @@ from torch import nn
 from ride_hailing.envs.utilities import *
 from multiprocessing import Process, Queue, Array
 from copy import deepcopy
+import gc
 device = "cuda" if torch.cuda.is_available() else "cpu"
 class valueEstimator(nn.Module):
     def __init__(self, env):
@@ -17,10 +18,11 @@ class valueEstimator(nn.Module):
             nn.Linear(256, 1),
             nn.ReLU(),
         )#policy network
-        self.dataset_size = 5
+        self.dataset_size = 20
         self.dataset = []#it contains various car states
         self.scale = 10
         self.dataset_q = Queue()
+        self.rates = Array('d',[0]*self.dataset_size)
 
 
 
@@ -38,7 +40,7 @@ class valueEstimator(nn.Module):
         procs = []
         print("Sampling Trajectories...")
         for i in range(self.dataset_size):
-            p = Process(target=self.generateSamples, args=(policyNet,i))
+            p = Process(target=self.generateSamples, args=(policyNet,i, self.rates))
             procs.append(p)
             p.start()
         while 1:
@@ -51,26 +53,27 @@ class valueEstimator(nn.Module):
                 Prob = Prob + Prob_piece
                 processed_num += 1
             if processed_num >= self.dataset_size and self.dataset_q.empty():
-                print("while loop out")
+                #print("while loop out")
                 break
 
         for p in procs:
             p.join()
+        print("Average rate", sum(self.rates[:])/self.dataset_size)
         print("Sampling is done")
         return S, V, Action, R, Prob
 
-    def generateSamples(self, policyNet, i):#generate data according to a policy net
-        print("iter: " + str(i+1) + "/" +str(self.dataset_size))
+    def generateSamples(self, policyNet, i, rates):#generate data according to a policy net
+        #print("iter: " + str(i+1) + "/" +str(self.dataset_size))
         data_single_trial = []
         env = deepcopy(self.env)
-        state = env.reset()
+        state,_ = env.reset()
         state = torch.from_numpy(state.astype(np.float32))
         while env.city_time < env.time_horizon:
             data_piece = []
             action_distrib = policyNet(state)
             action = torch.multinomial(action_distrib/torch.sum(action_distrib), 1).item()
             action_prob = action_distrib[action]
-            state_orig, action, reward, feasible_act = env.step(action)
+            state_orig, action, reward, action_mask, feasible_act = env.step(action)
             state = torch.from_numpy(state_orig.astype(np.float32))
             falseCount = 0
             if feasible_act == True:
@@ -86,16 +89,17 @@ class valueEstimator(nn.Module):
                     action_prob = action_distrib[action]
                     feasible_act = env.is_action_feasible(action)
                     falseCount += 1
-                state_orig, action, reward, feasible_act = env.step(action)
+                state_orig, action, reward, action_mask, feasible_act = env.step(action)
                 state = torch.from_numpy(state_orig.astype(np.float32))
                 data_piece.append(reward)
                 data_piece.append(state_orig)
                 data_piece.append(action)
                 data_piece.append(action_prob.item())
             data_single_trial.append(data_piece)
-            if env.city_time%180 == 0 and env.i == 0:
-                print("test envTime",env.city_time, "It", env.It, "total_reward", env.total_reward, "num_request", env.num_request, "FalseCount", falseCount)
-        print("rate: " + str(i) + " : ", env.total_reward / env.num_request)
+            #if env.city_time%180 == 0 and env.i == 0:
+            #    print("test envTime",env.city_time, "It", env.It, "total_reward", env.total_reward, "num_request", env.num_request, "FalseCount", falseCount)
+        rates[i] = env.total_reward / env.num_request
+        #print("rate: " + str(i) + " : ", env.total_reward / env.num_request)
         self.dataset_q.put(data_single_trial)
 
 

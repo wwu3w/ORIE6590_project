@@ -77,13 +77,13 @@ if __name__== '__main__':
 	policyNet = PolicyNet(env)
 	valuefnc = valueEstimator(env)
 	epochs = 10
-	learning_rate = 0.00035
-	learning_rate_policy = 0.00002
-	batch_size = 512
+	learning_rate = 0.0001
+	learning_rate_policy = 0.000001
+	batch_size = 3000
 	loss_fn = nn.MSELoss()#for value network training
 	optimizer = torch.optim.Adam(valuefnc.parameters(), lr = learning_rate)
 	optimizer_policy = torch.optim.Adam(policyNet.parameters(), lr = learning_rate_policy)
-	scheduler = torch.optim.lr_scheduler.StepLR(optimizer_policy, step_size = 1,  gamma = 0.5)
+	scheduler = torch.optim.lr_scheduler.StepLR(optimizer_policy, step_size = 1,  gamma = 0.9)
 
 
 	for epoch in range(epochs):

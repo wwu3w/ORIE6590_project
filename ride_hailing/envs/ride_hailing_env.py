@@ -71,7 +71,6 @@ class CityReal(gym.Env):
         state_c = np.reshape(np.array(self.c_state), self.R * (self.tau_d+self.L))
         state_p = np.reshape(np.array(self.p_state), self.R ** 2)
         state = np.concatenate((state_time, state_c, state_p), axis=None)
-
         return state
 
 
@@ -194,9 +193,13 @@ class CityReal(gym.Env):
 
         next_state = self.generate_state()
         self.update_action_mask()
-
-
-
         return next_state, action, reward, self.action_mask, True
+
+    def is_action_feasible(self,action):
+        o, d = np.divmod(int(action), int(self.R))
+        if np.sum(self.c_state[o, 0: self.patience_time]) <= 0:
+            return False
+        else:
+            return True
 
 
